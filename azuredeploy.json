@@ -109,7 +109,7 @@
         "[resourceId('Microsoft.Web/Sites', variables('functionAppName'))]"
       ],
       "properties": {
-        "RepoUrl": "https://github.com/chrhuns/azurefunctions_template.git",
+        "RepoUrl": "https://github.com/telenorbusiness/Business_SmartWorker_AzureFunctions_Office365.git",
         "branch": "master",
         "IsManualIntegration": true
       }
