@@ -1,75 +1,41 @@
 var Promise = require('bluebird');
 var requestPromise = require('request-promise');
+const reftokenAuth = require('../auth');
 
 module.exports = function (context, req) {
     Promise
         .try(() =>  {
-            return auth(req, context);
+            return reftokenAuth(req);
         })
-        .then((graphToken) => {
-            return getNumOfUnreadMails(graphToken, context);
+        .then((response) => {
+            if(response.status === 200 && response.azureUserToken) {
+                return getNumOfUnreadMails(response.azureUserToken, context);
+            }
+            else {
+                throw new atWorkValidateError(response.message, response.status);
+            }
         })
         .then((numOfUnreadMails) => {
-            let res = {
+            context.res = {
                 body: createTile(numOfUnreadMails)
             };
             return context.done(null, res);
         })
         .catch(atWorkValidateError,(error) => {
-            let res = {
+            context.res = {
                 status: error.response,
-                body: JSON.parse(error.message)
+                body: error.message
             }
-            return context.done(null, res);
-        })
-        .catch(authHeaderUndefinedError,(error) => {
-            let res = {
-                status: 403,
-                body: error+""
-            };
             return context.done(null, res);
         })
         .catch((error) => {
             context.log(error);
-            let res = {
+            context.res = {
                 body: error.message
             };
             return context.done(null, res);
         });
 };
-
-function auth(req, context) {
-
-    if (typeof (req.headers.authorization) === 'undefined') {
-        throw new authHeaderUndefinedError('Auth header is undefined');
-    }
-
-    var guidToken = req.headers.authorization.replace("Bearer ", "");
-    var requestOptions = {
-        method: 'POST',
-        resolveWithFullResponse: true,
-        json: true,
-        simple: false,
-        uri: getEnvironmentVariable("validatePartnerEndpoint"), //Using dev for now. Prod one is in env variables
-        headers: {
-            'Authorization': 'Basic ' + getEnvironmentVariable("clientIdSecret")
-        },
-        body: {
-            "token": guidToken
-        }
-    };
-
-    return requestPromise(requestOptions)
-        .then(function (response) {
-            if (response.statusCode === 200 && typeof(response.body.error) === "undefined") {
-                return response.body.azureUserToken;
-                //return the azure graph token when ready
-            }
-            else {
-                throw new atWorkValidateError(JSON.stringify(response.body), response.statusCode);
-            }
-        });
-}
 
 function getNumOfUnreadMails(graphToken, context) {
     var requestOptions = {
@@ -103,13 +69,13 @@ function getNumOfUnreadMails(graphToken, context) {
 function createTile(numOfUnreadMails) {
 
     var tile = {
-        "type": "icon",
-        "iconUrl": "https://i.pinimg.com/736x/5d/a6/54/5da6545d8d46ea858c3507e914b0c027--email-icon-personality-types.jpg",
-        "footnote": "Ulest e-post",
-        "notifications": numOfUnreadMails,
-        "onClick": {
-            "type": "micro-app",
-            "apiUrl": "https://"+getEnvironmentVariable("appName")+".azurewebsites.net/api/emails_microapp"
+        type: "icon",
+        iconUrl: "https://i.pinimg.com/736x/5d/a6/54/5da6545d8d46ea858c3507e914b0c027--email-icon-personality-types.jpg",
+        footnote: "Ulest e-post",
+        notifications: numOfUnreadMails,
+        onClick: {
+            type: "micro-app",
+            apiUrl: "https://"+getEnvironmentVariable("appName")+".azurewebsites.net/api/emails_microapp"
         }
     };
 
@@ -121,7 +87,6 @@ function getEnvironmentVariable(name)
     return process.env[name];
 }
 
-class authHeaderUndefinedError extends Error {}
 class atWorkValidateError extends Error {
     constructor(message, response) {
         super(message);

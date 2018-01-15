@@ -1,76 +1,43 @@
 var Promise = require('bluebird');
 var requestPromise = require('request-promise');
+const reftokenAuth = require('../auth');
 
 module.exports = function (context, req) {
         Promise
             .try(() =>  {
-                return auth(req, context);
+                return reftokenAuth(req);
             })
-            .then((graphToken) => {
-                return getDocuments(graphToken, context);
+            .then((response) => {
+                if(response.status === 200 && response.azureUserToken) {
+                    return getDocuments(response.azureToken, context);
+                }
+                else {
+                    throw new atWorkValidateError(response.message, response.status);
+                }
             })
             .then((documents) => {
-                let res = {
+                context.res = {
                     body: createMicroApp(documents)
                 };
                 return context.done(null, res);
             })
             .catch(atWorkValidateError,(error) => {
                 context.log("Logger: "+error.response);
-                let res = {
+                context.res = {
                     status: error.response,
                     body: JSON.parse(error.message)
                 }
                 return context.done(null, res);
             })
-            .catch(authHeaderUndefinedError,(error) => {
-                let res = {
-                    status: 403,
-                    body: error+""
-                };
-                return context.done(null, res);
-            })
             .catch((error) => {
                 context.log(error);
-                let res = {
-                    body: error.message
+                context.res = {
+                    status: 500,
+                    body: "An unexpected error occurred"
                 };
                 return context.done(null, res);
             });
 };
-
-function auth(req, context) {
-
-    if (typeof (req.headers.authorization) === 'undefined') {
-        throw new authHeaderUndefinedError('Auth header is undefined');
-    }
-
-    var guidToken = req.headers.authorization.replace("Bearer ", "");
-    var requestOptions = {
-        method: 'POST',
-        resolveWithFullResponse: true,
-        json: true,
-        simple: false,
-        uri: getEnvironmentVariable("validatePartnerEndpoint"), //Using dev for now. Prod one is in env variables
-        headers: {
-            'Authorization': 'Basic ' + getEnvironmentVariable("clientIdSecret")
-        },
-        body: {
-            "token": guidToken
-        }
-    };
-
-    return requestPromise(requestOptions)
-        .then(function (response) {
-            if (response.statusCode === 200 && typeof(response.body.error) === "undefined") {
-                return response.body.azureUserToken
-                //return the azure graph token when ready
-            }
-            else {
-                throw new atWorkValidateError(JSON.stringify(response.body), response.statusCode);
-            }
-        });
-}
 
 function getDocuments(graphToken, context) {
     var requestOptions = {
@@ -97,15 +64,16 @@ function getDocuments(graphToken, context) {
 
 function createMicroApp(documents) {
     var microApp = {
-        "search": {
-            "type": "local",
-            "placeholder": "Søk etter dokumenter"
+        id: "documents_main",
+        search: {
+            type: "local",
+            placeholder: "Søk etter dokumenter"
         },
-        "sections": [
+        sections: [
             {
-            "header": 'Dokumenter',
-            "searchableParameters" : ["title"],
-            "rows": []
+            header: 'Dokumenter',
+            searchableParameters : ["title"],
+            rows: []
             }
         ],
     };
@@ -114,11 +82,11 @@ function createMicroApp(documents) {
         if(!documents.value[i].folder) {
             microApp.sections[0].rows.push(
                 {
-                "type": "text",
-                "title": documents.value[i].name,
-                "onClick": {
-                "type": "open-url",
-                "url": documents.value[i].webUrl
+                type: "text",
+                title: documents.value[i].name,
+                onClick: {
+                type: "open-url",
+                url: documents.value[i].webUrl
                 }
             });
         }
@@ -131,7 +99,6 @@ function getEnvironmentVariable(name)
     return process.env[name];
 }
 
-class authHeaderUndefinedError extends Error {}
 class atWorkValidateError extends Error {
     constructor(message, response) {
         super(message);
