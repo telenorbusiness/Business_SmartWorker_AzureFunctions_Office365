@@ -1,25 +1,19 @@
 var Promise = require('bluebird');
 var requestPromise = require('request-promise');
-var reftokenAuth = require('../auth');
+const reftokenAuth = require('../auth');
 var moment = require('moment-timezone');
-var request = require('request-promise');
-const Issuer = require('openid-client').Issuer;
-const jose = require('node-jose');
-const lodash = require('lodash');
 
 module.exports = function (context, req) {
-
     Promise
         .try(() =>  {
             return reftokenAuth(req);
         })
         .then((response) => {
-            context.log(JSON.stringify(response));
             if(response.status === 200 && response.azureUserToken) {
                 return getNumOfAppointments(context, response.azureUserToken);
             }
             else {
-                throw new atWorkValidateError(response.message, response.status);
+                throw new atWorkValidateError(JSON.stringify(response.message), response.status);
             }
         })
         .then((numberOfAppointments) => {
@@ -29,10 +23,10 @@ module.exports = function (context, req) {
             return context.done(null, res);
         })
         .catch(atWorkValidateError,(error) => {
-            context.log("Atwork error");
+            context.log("Atwork error. response " + JSON.stringify(error.response) );
             context.res = {
                 status: error.response,
-                body: createTile(null)
+                body: JSON.parse(error.message)
             };
             return context.done(null, res);
         })
