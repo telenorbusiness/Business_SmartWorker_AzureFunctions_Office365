@@ -128,7 +128,7 @@
       ],
       "properties": {
         "RepoUrl": "https://github.com/telenorbusiness/Business_SmartWorker_AzureFunctions_Office365.git",
-        "branch": "master",
+        "branch": "new_token_flow",
         "IsManualIntegration": true
       }
     }]
