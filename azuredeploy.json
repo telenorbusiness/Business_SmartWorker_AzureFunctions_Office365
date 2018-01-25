@@ -8,18 +8,6 @@
         "description": "The name of the function app that you wish to create. This will be a part of the API url."
       }
     },
-    "storageAccountType": {
-      "type": "string",
-      "defaultValue": "Standard_LRS",
-      "allowedValues": [
-        "Standard_LRS",
-        "Standard_GRS",
-        "Standard_ZRS"
-      ],
-      "metadata": {
-        "description": "Storage Account type. Choose Stanard_LRS if you are unsure."
-      }
-    },
     "clientId": {
       "type": "string",
       "metadata": {
@@ -42,7 +30,8 @@
   "variables": {
     "functionAppName": "[parameters('appName')]",
     "hostingPlanName": "[concat(parameters('appName'), '-plan')]",
-    "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'functions')]"
+    "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'functions')]",
+    "storageAccountType": "Standard_LRS"
   },
   "resources": [{
     "type": "Microsoft.Storage/storageAccounts",
@@ -50,7 +39,7 @@
     "apiVersion": "2015-06-15",
     "location": "[resourceGroup().location]",
     "properties": {
-      "accountType": "[parameters('storageAccountType')]"
+      "accountType": "[variables('storageAccountType')]"
     }
   }, {
     "type": "Microsoft.Web/serverfarms",
