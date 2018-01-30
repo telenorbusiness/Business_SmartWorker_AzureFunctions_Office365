@@ -45,7 +45,7 @@ function getMails(graphToken) {
         resolveWithFullResponse: true,
         json: true,
         simple: false,
-        uri: 'https://graph.microsoft.com/beta/me/messages',
+        uri: encodeURI('https://graph.microsoft.com/beta/me/messages?$filter=isRead eq false&$top=15'),
         headers: {
             'Authorization': 'Bearer ' + graphToken
         },

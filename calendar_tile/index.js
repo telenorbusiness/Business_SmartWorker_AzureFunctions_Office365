@@ -41,8 +41,6 @@ module.exports = function (context, req) {
 };
 
 function getNumOfAppointments(context, graphToken) {
-    context.log('https://graph.microsoft.com/beta/me/calendarview?startdatetime=' + moment.utc().tz('Europe/Oslo').locale('nb').startOf('day').format()
-        + '&enddatetime=' + moment().endOf('day').utc().format());
     var requestOptions = {
         method: 'GET',
         resolveWithFullResponse: true,
