@@ -88,14 +88,10 @@ function createMicroApp(appointments) {
             rows = [];
         }
         rows.push({
-            type: "text",
+            type: "rich-text",
             title: appointments[i].subject,
-            subtitle: appointments[i].bodyPreview,
-            text: getPrettyDate(appointments[i].start.dateTime),
-            onClick: {
-                type: "text",
-                text: appointments[i].bodyPreview
-            }
+            content: appointments[i].bodyPreview,
+            text: getPrettyDate(appointments[i].start.dateTime)
         });
 
         if(i === appointments.length - 1) {

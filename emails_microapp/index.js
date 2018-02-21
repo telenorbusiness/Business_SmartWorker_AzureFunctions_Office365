@@ -77,10 +77,10 @@ function createMicroApp(mails) {
       if(!mails.value[i].isRead){
         microApp.sections[0].rows.push(
           {
-            type: "text",
+            type: "rich-text",
             title: mails.value[i].subject,
-            subtitle: mails.value[i].sender.emailAddress.address,
-            text: moment.utc(mails.value[i].sentDateTime).tz('Europe/Oslo').locale('nb').format("LLL"),
+            text: mails.value[i].sender.emailAddress.address,
+            tag: moment.utc(mails.value[i].sentDateTime).tz('Europe/Oslo').locale('nb').format("LLL"),
             onClick: {
               type: "open-url",
               url: mails.value[i].webLink
