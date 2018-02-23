@@ -17,14 +17,14 @@ module.exports = function (context, req) {
                 }
             })
             .then((mails) => {
-                context.res = {
+                let res = {
                     body: createMicroApp(mails)
                 };
                 return context.done(null, res);
             })
             .catch(atWorkValidateError,(error) => {
                 context.log("Atwork error: " + error.message);
-                context.res = {
+                let res = {
                     status: error.response,
                     body: error.message
                 }
@@ -32,7 +32,7 @@ module.exports = function (context, req) {
             })
             .catch((error) => {
                 context.log(error);
-                context.res = {
+                let res = {
                     body: error.message
                 };
                 return context.done(null, res);

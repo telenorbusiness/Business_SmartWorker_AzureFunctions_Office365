@@ -17,13 +17,13 @@ module.exports = function (context, req) {
             }
         })
         .then((numOfUnreadMails) => {
-            context.res = {
+            let res = {
                 body: createTile(numOfUnreadMails)
             };
             return context.done(null, res);
         })
         .catch(atWorkValidateError,(error) => {
-            context.res = {
+            let res = {
                 status: error.response,
                 body: error.message
             }
@@ -31,7 +31,7 @@ module.exports = function (context, req) {
         })
         .catch((error) => {
             context.log(error);
-            context.res = {
+            let res = {
                 body: error.message
             };
             return context.done(null, res);

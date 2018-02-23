@@ -18,13 +18,13 @@ module.exports = function (context, req) {
             }
         })
         .then((appointments) => {
-            context.res = {
+            let res = {
                 body: createMicroApp(appointments)
             };
             return context.done(null, res);
         })
         .catch(atWorkValidateError,(error) => {
-            context.res = {
+            let res = {
                 status: error.response,
                 body: error.message
             };
@@ -32,7 +32,7 @@ module.exports = function (context, req) {
         })
         .catch((error) => {
             context.log(error);
-            context.res = {
+            let res = {
                 status: 500,
                 body: 'An unexpected error occurred'
             };

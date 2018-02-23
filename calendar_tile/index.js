@@ -17,14 +17,14 @@ module.exports = function (context, req) {
             }
         })
         .then((numberOfAppointments) => {
-            context.res = {
+            let res = {
                 body: createTile(numberOfAppointments)
             };
             return context.done(null, res);
         })
         .catch(atWorkValidateError,(error) => {
             context.log("Atwork error. response " + JSON.stringify(error.response) );
-            context.res = {
+            let res = {
                 status: error.response,
                 body: JSON.parse(error.message)
             };
@@ -32,7 +32,7 @@ module.exports = function (context, req) {
         })
         .catch((error) => {
             context.log(error);
-            context.res = {
+            let res = {
                 status: 500,
                 body: 'An unexpected error occurred'
             };
