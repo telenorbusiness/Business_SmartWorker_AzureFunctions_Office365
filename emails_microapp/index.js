@@ -45,7 +45,7 @@ function getMails(graphToken) {
         resolveWithFullResponse: true,
         json: true,
         simple: false,
-        uri: encodeURI('https://graph.microsoft.com/beta/me/messages?$filter=isRead eq false&$top=15'),
+        uri: encodeURI('https://graph.microsoft.com/v1.0/me/messages?$filter=isRead eq false&$top=15'),
         headers: {
             'Authorization': 'Bearer ' + graphToken
         },
@@ -80,7 +80,7 @@ function createMicroApp(mails) {
             type: "rich-text",
             title: mails.value[i].subject,
             text: mails.value[i].sender.emailAddress.address,
-            tag: moment.utc(mails.value[i].sentDateTime).tz('Europe/Oslo').locale('nb').format("LLL"),
+            content: moment.utc(mails.value[i].sentDateTime).tz('Europe/Oslo').locale('nb').format("LLL"),
             onClick: {
               type: "open-url",
               url: mails.value[i].webLink

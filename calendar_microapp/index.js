@@ -10,10 +10,11 @@ module.exports = function (context, req) {
            return reftokenAuth(req);
         })
         .then((response) => {
-            if(response.statusCode === 200 && response.azureUserToken) {
+            if(response.status === 200 && response.azureUserToken) {
                 return getAppointments(context, response.azureUserToken);
             }
             else {
+                context.log("AtWork responded with: " + JSON.stringify(response));
                 throw new atWorkValidateError(response.message, response.status);
             }
         })
@@ -91,7 +92,7 @@ function createMicroApp(appointments) {
             type: "rich-text",
             title: appointments[i].subject,
             content: appointments[i].bodyPreview,
-            text: getPrettyDate(appointments[i].start.dateTime)
+            tag: getPrettyDate(appointments[i].start.dateTime)
         });
 
         if(i === appointments.length - 1) {
@@ -101,6 +102,15 @@ function createMicroApp(appointments) {
             });
         }
         lastDay = moment.utc(appointments[i].start.dateTime).tz('Europe/Oslo').locale('nb').day();
+    }
+
+    if(microApp.sections.length === 0) {
+        microApp.sections.push({
+            rows: [{
+                type: "text",
+                title: "Ingen avtaler den neste uken"
+            }]
+        });
     }
     return microApp;
 }
@@ -113,10 +123,10 @@ function getEnvironmentVariable(name)
 function getPrettyDate(callDateTime) {
     let time = moment.utc(callDateTime).tz('Europe/Oslo').locale('nb');
     if (time.isSame(new Date(), "day")) {
-        return time.format('LTS');
+        return time.format('LT');
     }
     else {
-        return time.format('L');
+        return time.format('LT');
     }
 }
 
