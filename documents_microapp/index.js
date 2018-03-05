@@ -17,8 +17,8 @@ module.exports = function (context, req) {
                     throw new atWorkValidateError(response.message, response.status);
                 }
             })
-            .catch((sharePointError) => {
-                context.log(sharePointError);
+            .catch(sharePointError, (error) => {
+                context.log(error);
                 context.log("Error fetching from sharePoint, falling back to fetch from shared documents in onedrive");
                 return getDocuments(graphToken, context);
             })

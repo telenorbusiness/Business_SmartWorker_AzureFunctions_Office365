@@ -37,8 +37,8 @@ module.exports = function (context, req) {
 function createTile() {
     var tile = {
         "type": "icon",
-        "iconUrl": "http://downloadicons.net/sites/default/files/business-document-icon-64269.png",
-        "footnote": "Dokumenter",
+        "iconUrl": "https://cdn4.iconfinder.com/data/icons/universal-web-vol-1/256/43-512.png",
+        "footnote": "Se delte dokumenter",
         "onClick": {
         "type": "micro-app",
         "apiUrl": "https://"+getEnvironmentVariable("appName")+".azurewebsites.net/api/documents_microapp"
