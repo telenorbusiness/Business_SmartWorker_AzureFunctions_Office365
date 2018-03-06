@@ -1,12 +1,25 @@
 var Promise = require('bluebird');
 var requestPromise = require('request-promise');
+const reftokenAuth = require('../auth');
 
 module.exports = function (context, req) {
+    let graphToken;
         Promise
             .try(() =>  {
-                return auth(req, context);
+                return reftokenAuth(req);
             })
-            .then((graphToken) => {
+            .then((response) => {
+                if(response.status === 200 && response.azureUserToken) {
+                    graphToken = response.azureUserToken;
+                    return getDocumentsFromSharepoint(response.azureToken, context);
+                }
+                else {
+                    throw new atWorkValidateError(response.message, response.status);
+                }
+            })
+            .catch(sharePointError, (error) => {
+                context.log(error);
+                context.log("Error fetching from sharePoint, falling back to fetch from shared documents in onedrive");
                 return getDocuments(graphToken, context);
             })
             .then((documents) => {
@@ -23,54 +36,15 @@ module.exports = function (context, req) {
                 }
                 return context.done(null, res);
             })
-            .catch(authHeaderUndefinedError,(error) => {
-                let res = {
-                    status: 403,
-                    body: error+""
-                };
-                return context.done(null, res);
-            })
             .catch((error) => {
                 context.log(error);
                 let res = {
-                    body: error.message
+                    status: 500,
+                    body: "An unexpected error occurred"
                 };
                 return context.done(null, res);
             });
 };
-
-function auth(req, context) {
-
-    if (typeof (req.headers.authorization) === 'undefined') {
-        throw new authHeaderUndefinedError('Auth header is undefined');
-    }
-
-    var guidToken = req.headers.authorization.replace("Bearer ", "");
-    var requestOptions = {
-        method: 'POST',
-        resolveWithFullResponse: true,
-        json: true,
-        simple: false,
-        uri: getEnvironmentVariable("validatePartnerEndpoint"), //Using dev for now. Prod one is in env variables
-        headers: {
-            'Authorization': 'Basic ' + getEnvironmentVariable("clientIdSecret")
-        },
-        body: {
-            "token": guidToken
-        }
-    };
-
-    return requestPromise(requestOptions)
-        .then(function (response) {
-            if (response.statusCode === 200 && typeof(response.body.error) === "undefined") {
-                return response.body.azureUserToken
-                //return the azure graph token when ready
-            }
-            else {
-                throw new atWorkValidateError(JSON.stringify(response.body), response.statusCode);
-            }
-        });
-}
 
 function getDocuments(graphToken, context) {
     var requestOptions = {
@@ -78,7 +52,7 @@ function getDocuments(graphToken, context) {
         resolveWithFullResponse: true,
         json: true,
         simple: false,
-        uri: 'https://graph.microsoft.com/beta/me/drive/root/children',
+        uri: 'https://graph.microsoft.com/v1.0/me/drive/sharedWithMe',
         headers: {
             'Authorization': 'Bearer ' + graphToken
         },
@@ -92,37 +66,102 @@ function getDocuments(graphToken, context) {
             else {
                 throw new Error('Fetching documents returned with status code: ' + response.statusCode + " and message: " + response.body.error.message);
             }
+        });
+}
+
+function getDocumentsFromSharepoint(graphToken) {
+    let hostName = getEnvironmentVariable("sharepointHostName");
+    let relativePathName = getEnvironmentVariable("sharepointRelativePathName");
+
+    if(!hostName || !relativePathName) {
+        throw new sharePointError('Sharepoint env vars not set');
+    }
+
+    var requestOptions = {
+        method: 'GET',
+        json: true,
+        simple: true,
+        uri: encodeURI('https://graph.microsoft.com/v1.0/sites/' + hostName + ':/sites/' + relativePathName),
+        headers: {
+            'Authorization': 'Bearer ' + graphToken
+        },
+    };
+
+    return requestPromise(requestOptions)
+        .then(function (body) {
+            let siteId = body.id;
+            requestOptions.uri = encodeURI('https://graph.microsoft.com/v1.0/sites/' + siteId + '/drive/root/children');
+            return requestPromise(requestOptions);
         })
+        .then(function(response) {
+            return response;
+        })
+        .catch(function(error) {
+            throw new sharePointError(error);
+        });
 }
 
 function createMicroApp(documents) {
-    var microApp = {
-        "search": {
-            "type": "local",
-            "placeholder": "Søk etter dokumenter"
-        },
-        "sections": [
-            {
-            "header": 'Dokumenter',
-            "searchableParameters" : ["title"],
-            "rows": []
-            }
-        ],
-    };
 
+    let folderRows = [];
+    let fileRows = [];
     for (let i = 0; i < documents.value.length; i++) {
         if(!documents.value[i].folder) {
-            microApp.sections[0].rows.push(
-                {
-                "type": "text",
-                "title": documents.value[i].name,
-                "onClick": {
-                "type": "open-url",
-                "url": documents.value[i].webUrl
+            fileRows.push({
+                type: "text",
+                title: documents.value[i].name,
+                onClick: {
+                type: "open-url",
+                url: documents.value[i].webUrl
+                }
+            });
+        }
+        else {
+            let driveId;
+            let itemId;
+            // If driveitems are fetched with 'sharedWithMe'
+            if(documents.value[i].remoteItem && documents.value[i].remoteItem.parentReference) {
+                driveId = documents.value[i].remoteItem.parentReference.driveId;
+                itemId = documents.value[i].remoteItem.id;
+            }
+            // If driveitems are fetched from sharePoint
+            if(documents.value[i].id && documents.value[i].parentReference) {
+                driveId = documents.value[i].parentReference.driveId;
+                itemId = documents.value[i].id;
+            }
+            folderRows.push({
+                type: "text",
+                title: documents.value[i].name,
+                onClick: {
+                    type: "call-api",
+                    url: "https://"+getEnvironmentVariable("appName")+".azurewebsites.net/api/documents_microapp_subview",
+                    httpBody: {
+                        folderName: documents.value[i].name,
+                        driveId: driveId,
+                        itemId: itemId,
+                        depth: 0
+                    },
+                    httpMethod: "POST"
                 }
             });
         }
     }
+
+    var microApp = {
+        id: "documents_main",
+        search: {
+            type: "local",
+            placeholder: "Søk etter dokumenter"
+        },
+        sections: [
+            {
+            header: 'Dokumenter',
+            searchableParameters : ["title"],
+            rows: folderRows.concat(fileRows)
+            }
+        ],
+    };
+
     return microApp;
 }
 
@@ -131,10 +170,15 @@ function getEnvironmentVariable(name)
     return process.env[name];
 }
 
-class authHeaderUndefinedError extends Error {}
 class atWorkValidateError extends Error {
     constructor(message, response) {
         super(message);
         this.response = response;
+    }
+}
+
+class sharePointError extends Error {
+    constructor(message) {
+        super(message);
     }
 }

@@ -1,13 +1,20 @@
 var Promise = require('bluebird');
 var requestPromise = require('request-promise');
+const reftokenAuth = require('../auth');
+var moment = require('moment-timezone');
 
 module.exports = function (context, req) {
     Promise
         .try(() =>  {
-            return auth(req, context);
+            return reftokenAuth(req);
         })
-        .then((graphToken) => {
-            return getNumOfUnreadMails(graphToken, context);
+        .then((response) => {
+            if(response.status === 200 && response.azureUserToken) {
+                return getNumOfUnreadMails(response.azureUserToken, context);
+            }
+            else {
+                throw new atWorkValidateError(response.message, response.status);
+            }
         })
         .then((numOfUnreadMails) => {
             let res = {
@@ -18,15 +25,8 @@ module.exports = function (context, req) {
         .catch(atWorkValidateError,(error) => {
             let res = {
                 status: error.response,
-                body: JSON.parse(error.message)
+                body: error.message
             }
-            return context.done(null, res);
-        })
-        .catch(authHeaderUndefinedError,(error) => {
-            let res = {
-                status: 403,
-                body: error+""
-            };
             return context.done(null, res);
         })
         .catch((error) => {
@@ -38,47 +38,16 @@ module.exports = function (context, req) {
         });
 };
 
-function auth(req, context) {
-
-    if (typeof (req.headers.authorization) === 'undefined') {
-        throw new authHeaderUndefinedError('Auth header is undefined');
-    }
-
-    var guidToken = req.headers.authorization.replace("Bearer ", "");
-    var requestOptions = {
-        method: 'POST',
-        resolveWithFullResponse: true,
-        json: true,
-        simple: false,
-        uri: getEnvironmentVariable("validatePartnerEndpoint"), //Using dev for now. Prod one is in env variables
-        headers: {
-            'Authorization': 'Basic ' + getEnvironmentVariable("clientIdSecret")
-        },
-        body: {
-            "token": guidToken
-        }
-    };
-
-    return requestPromise(requestOptions)
-        .then(function (response) {
-            if (response.statusCode === 200 && typeof(response.body.error) === "undefined") {
-                return response.body.azureUserToken;
-                //return the azure graph token when ready
-            }
-            else {
-                throw new atWorkValidateError(JSON.stringify(response.body), response.statusCode);
-            }
-        });
-}
-
 function getNumOfUnreadMails(graphToken, context) {
+    let dateOfLastEmail = moment.utc().tz('Europe/Oslo').locale('nb').subtract(14, 'days').format('YYYY-MM-DD');
     var requestOptions = {
         method: 'GET',
         resolveWithFullResponse: true,
         json: true,
         simple: false,
-        uri: 'https://graph.microsoft.com/beta/me/messages',
+        uri: encodeURI('https://graph.microsoft.com/v1.0/me/messages/$count/?$filter=isRead eq false and ReceivedDateTime ge ' + dateOfLastEmail),
         headers: {
+            'Accept': 'text/plain',
             'Authorization': 'Bearer ' + graphToken
         },
     };
@@ -86,32 +55,40 @@ function getNumOfUnreadMails(graphToken, context) {
     return requestPromise(requestOptions)
         .then(function (response) {
             if(response.statusCode === 200) {
-                var numOfUnreadMails=0;
-                for(let i = 0; i < response.body.value.length; i++) {
-                    if(!response.body.value[i].isRead) {
-                        numOfUnreadMails++;
-                    }
+                var numOfUnreadMails = 0;
+                if(response.body) {
+                  numOfUnreadMails = response.body;
                 }
                 return numOfUnreadMails;
             }
             else {
-                throw new Error('Fetching mails returned with status code: ' + response.statusCode);
+                context.log('Fetching mails returned with status code: ' + response.statusCode);
+                return null;
             }
         })
 }
 
 function createTile(numOfUnreadMails) {
-
-    var tile = {
-        "type": "icon",
-        "iconUrl": "https://i.pinimg.com/736x/5d/a6/54/5da6545d8d46ea858c3507e914b0c027--email-icon-personality-types.jpg",
-        "footnote": "Ulest e-post",
-        "notifications": numOfUnreadMails,
-        "onClick": {
-            "type": "micro-app",
-            "apiUrl": "https://"+getEnvironmentVariable("appName")+".azurewebsites.net/api/emails_microapp"
-        }
-    };
+    let tile={};
+    if(numOfUnreadMails !== null) {
+        tile = {
+            type: "icon",
+            iconUrl: "https://i.pinimg.com/736x/5d/a6/54/5da6545d8d46ea858c3507e914b0c027--email-icon-personality-types.jpg",
+            footnote: "Se siste uleste e-post",
+            notifications: numOfUnreadMails,
+            onClick: {
+                type: "micro-app",
+                apiUrl: "https://"+getEnvironmentVariable("appName")+".azurewebsites.net/api/emails_microapp"
+            }
+        };
+    }
+    else {
+        tile = {
+            type: "icon",
+            iconUrl: "https://i.pinimg.com/736x/5d/a6/54/5da6545d8d46ea858c3507e914b0c027--email-icon-personality-types.jpg",
+            footnote: "Kunne ikke hente e-post"
+        };
+    }
 
     return tile;
 }
@@ -121,7 +98,6 @@ function getEnvironmentVariable(name)
     return process.env[name];
 }
 
-class authHeaderUndefinedError extends Error {}
 class atWorkValidateError extends Error {
     constructor(message, response) {
         super(message);

@@ -5,33 +5,33 @@
     "appName": {
       "type": "string",
       "metadata": {
-        "description": "The name of the function app that you wish to create."
+        "description": "The name of the function app that you wish to create. This will be a part of the API url."
       }
     },
-    "storageAccountType": {
-      "type": "string",
-      "defaultValue": "Standard_LRS",
-      "allowedValues": [
-        "Standard_LRS",
-        "Standard_GRS",
-        "Standard_ZRS",
-        "Premium_LRS"
-      ],
-      "metadata": {
-        "description": "Storage Account type"
-      }
-    },
-    "clientIdSecret": {
+    "clientId": {
       "type": "string",
       "metadata": {
-        "description": "The encoded client id and secret from Smart Ansatt."
+        "description": "The clientId from Smart Ansatt"
       }
     },
+    "clientSecret": {
+      "type": "string",
+      "metadata": {
+        "description": "The clientSecret from Smart Ansatt"
+      }
+    },
+    "authKey": {
+      "type": "string",
+      "metadata": {
+        "description": "The auth key from Smart Ansatt"
+      }
+    }
   },
   "variables": {
     "functionAppName": "[parameters('appName')]",
     "hostingPlanName": "[concat(parameters('appName'), '-plan')]",
-    "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'functions')]"
+    "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'functions')]",
+    "storageAccountType": "Standard_LRS"
   },
   "resources": [{
     "type": "Microsoft.Storage/storageAccounts",
@@ -39,7 +39,7 @@
     "apiVersion": "2015-06-15",
     "location": "[resourceGroup().location]",
     "properties": {
-      "accountType": "[parameters('storageAccountType')]"
+      "accountType": "[variables('storageAccountType')]"
     }
   }, {
     "type": "Microsoft.Web/serverfarms",
@@ -93,11 +93,17 @@
           "name": "appName",
           "value": "[variables('functionAppName')]"
         }, {
-          "name": "clientIdSecret",
-          "value": "[parameters('clientIdSecret')]"
+          "name": "clientId_new",
+          "value": "[parameters('clientId')]"
         }, {
-          "name": "validatePartnerEndpoint",
-          "value": "https://smartansattapidev.pimdemo.no/partner/validate"
+          "name": "clientSecret_new",
+          "value": "[parameters('clientSecret')]"
+        }, {
+          "name": "authKey",
+          "value": "[parameters('authKey')]"
+        }, {
+          "name": "idpUrl",
+          "value": "https://smartworker-dev-azure-idp.pimdemo.no/"
         }]
       }
     },

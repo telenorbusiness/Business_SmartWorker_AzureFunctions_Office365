@@ -1,8 +1,11 @@
 {
   "dependencies": {
     "bluebird": "^3.5.0",
-    "moment": "^2.19.1",
+    "jose": "^0.3.2",
+    "lodash": "^4.17.4",
+    "moment": "^2.21.0",
     "moment-timezone": "^0.5.13",
+    "openid-client": "^1.19.0",
     "request": "^2.79.0",
     "request-promise": "^4.1.1"
   }

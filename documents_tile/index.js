@@ -1,29 +1,28 @@
 var Promise = require('bluebird');
 var requestPromise = require('request-promise');
+const reftokenAuth = require('../auth');
 
 module.exports = function (context, req) {
         Promise
             .try(() =>  {
-                return auth(req);
+                return reftokenAuth(req);
             })
             .then((response) => {
-                let res = {
+                if(response.status === 200 && response.azureUserToken) {
+                    let res = {
                     body: createTile()
-                };
-                return context.done(null, res);
+                    };
+                    return context.done(null, res);
+                }
+                else {
+                    throw new atWorkValidateError(response.message, response.status);
+                }
             })
             .catch(atWorkValidateError,(error) => {
                 let res = {
                   status: error.response,
-                  body: JSON.parse(error.message)
+                  body: error.message
                 }
-                return context.done(null, res);
-            })
-            .catch(authHeaderUndefinedError,(error) => {
-                let res = {
-                    status: 403,
-                    body: error+""
-                };
                 return context.done(null, res);
             })
             .catch((error) => {
@@ -35,43 +34,11 @@ module.exports = function (context, req) {
             });
 };
 
-function auth(req) {
-    if (typeof (req.headers.authorization) === 'undefined') {
-        throw new authHeaderUndefinedError('Auth header is undefined');
-    }
-
-    var guidToken = req.headers.authorization.replace("Bearer ", "");
-    var requestOptions = {
-        method: 'POST',
-        resolveWithFullResponse: true,
-        json: true,
-        simple: false,
-        uri: getEnvironmentVariable("validatePartnerEndpoint"), //Using dev for now. Prod one is in env variables
-        headers: {
-            'Authorization': 'Basic ' + getEnvironmentVariable("clientIdSecret")
-        },
-        body: {
-            "token": guidToken
-        }
-    };
-
-    return requestPromise(requestOptions)
-        .then(function (response) {
-            if (response.statusCode === 200 && typeof(response.body.error) === "undefined") {
-                return response.body.azureUserToken
-            }
-            else {
-               throw new atWorkValidateError(JSON.stringify(response.body), response.statusCode);
-            }
-        });
-}
-
 function createTile() {
-
     var tile = {
         "type": "icon",
-        "iconUrl": "http://downloadicons.net/sites/default/files/business-document-icon-64269.png",
-        "footnote": "Dokumenter",
+        "iconUrl": "https://cdn4.iconfinder.com/data/icons/universal-web-vol-1/256/43-512.png",
+        "footnote": "Se delte dokumenter",
         "onClick": {
         "type": "micro-app",
         "apiUrl": "https://"+getEnvironmentVariable("appName")+".azurewebsites.net/api/documents_microapp"
@@ -85,7 +52,6 @@ function getEnvironmentVariable(name)
     return process.env[name];
 }
 
-class authHeaderUndefinedError extends Error {}
 class atWorkValidateError extends Error {
     constructor(message, response) {
         super(message);

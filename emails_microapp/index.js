@@ -1,14 +1,20 @@
 var Promise = require('bluebird');
 var requestPromise = require('request-promise');
 var moment = require('moment-timezone');
+const reftokenAuth = require('../auth');
 
 module.exports = function (context, req) {
         Promise
             .try(() =>  {
-                return auth(req);
+                return reftokenAuth(req);
             })
-            .then((graphToken) => {
-                return getMails(graphToken);
+            .then((response) => {
+                if(response.status === 200 && response.azureUserToken) {
+                    return getMails(response.azureUserToken);
+                }
+                else {
+                    throw new atWorkValidateError(response.message, response.status);
+                }
             })
             .then((mails) => {
                 let res = {
@@ -17,17 +23,11 @@ module.exports = function (context, req) {
                 return context.done(null, res);
             })
             .catch(atWorkValidateError,(error) => {
+                context.log("Atwork error: " + error.message);
                 let res = {
                     status: error.response,
-                    body: JSON.parse(error.message)
+                    body: error.message
                 }
-                return context.done(null, res);
-            })
-            .catch(authHeaderUndefinedError,(error) => {
-                let res = {
-                    status: 403,
-                    body: error+""
-                };
                 return context.done(null, res);
             })
             .catch((error) => {
@@ -39,46 +39,13 @@ module.exports = function (context, req) {
             });
 };
 
-function auth(req, context) {
-
-    if (typeof (req.headers.authorization) === 'undefined') {
-        throw new authHeaderUndefinedError('Auth header is undefined');
-    }
-
-    var guidToken = req.headers.authorization.replace("Bearer ", "");
-    var requestOptions = {
-        method: 'POST',
-        resolveWithFullResponse: true,
-        json: true,
-        simple: false,
-        uri: getEnvironmentVariable("validatePartnerEndpoint"), //Using dev for now. Prod one is in env variables
-        headers: {
-            'Authorization': 'Basic ' + getEnvironmentVariable("clientIdSecret")
-        },
-        body: {
-            "token": guidToken
-        }
-    };
-
-    return requestPromise(requestOptions)
-        .then(function (response) {
-            if (response.statusCode === 200 && typeof(response.body.error) === "undefined") {
-                return response.body.azureUserToken
-                //return the azure graph token when ready
-            }
-            else {
-                throw new atWorkValidateError(JSON.stringify(response.body), response.statusCode);
-            }
-        });
-}
-
 function getMails(graphToken) {
     var requestOptions = {
         method: 'GET',
         resolveWithFullResponse: true,
         json: true,
         simple: false,
-        uri: 'https://graph.microsoft.com/beta/me/messages',
+        uri: encodeURI('https://graph.microsoft.com/v1.0/me/messages?$filter=isRead eq false&$top=15'),
         headers: {
             'Authorization': 'Bearer ' + graphToken
         },
@@ -97,10 +64,11 @@ function getMails(graphToken) {
 
 function createMicroApp(mails) {
     var microApp = {
-        "sections": [
+        id: "emails_main",
+        sections: [
             {
-            "header": 'Ulest e-post',
-            "rows": []
+            header: 'Ulest e-post',
+            rows: []
             }
         ],
     };
@@ -109,13 +77,13 @@ function createMicroApp(mails) {
       if(!mails.value[i].isRead){
         microApp.sections[0].rows.push(
           {
-            "type": "text",
-            "title": mails.value[i].subject,
-            "subtitle": mails.value[i].sender.emailAddress.address,
-            "text": moment.utc(mails.value[i].sentDateTime).tz('Europe/Oslo').locale('nb').format("LLL"),
-            "onClick": {
-              "type": "open-url",
-              "url": mails.value[i].webLink
+            type: "rich-text",
+            title: mails.value[i].subject,
+            text: mails.value[i].sender.emailAddress.address,
+            content: moment.utc(mails.value[i].sentDateTime).tz('Europe/Oslo').locale('nb').format("LLL"),
+            onClick: {
+              type: "open-url",
+              url: mails.value[i].webLink
             }
           });
       }
@@ -128,7 +96,6 @@ function getEnvironmentVariable(name)
     return process.env[name];
 }
 
-class authHeaderUndefinedError extends Error {}
 class atWorkValidateError extends Error {
     constructor(message, response) {
         super(message);
