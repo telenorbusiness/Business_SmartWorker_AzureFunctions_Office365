@@ -47,7 +47,6 @@ module.exports = function (context, req) {
 };
 
 function getDocuments(graphToken, context) {
-  context.log("token in main " + graphToken);
     var requestOptions = {
         method: 'GET',
         resolveWithFullResponse: true,

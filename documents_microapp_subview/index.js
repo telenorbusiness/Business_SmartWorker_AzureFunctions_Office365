@@ -13,7 +13,7 @@ module.exports = function (context, req) {
         })
         .then((response) => {
             if(response.status === 200 && response.azureUserToken) {
-                return getDocuments(response.azureToken, context, driveId, itemId);
+                return getDocuments(response.azureUserToken, context, driveId, itemId);
             }
             else {
                 throw new atWorkValidateError(response.message, response.status);
@@ -44,7 +44,6 @@ module.exports = function (context, req) {
 };
 
 function getDocuments(graphToken, context, driveId, itemId) {
-    context.log("token in subview " + graphToken);
     var requestOptions = {
         method: 'GET',
         resolveWithFullResponse: true,
