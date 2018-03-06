@@ -46,8 +46,8 @@ function getNumOfAppointments(context, graphToken) {
         resolveWithFullResponse: true,
         json: true,
         simple: false,
-        uri: 'https://graph.microsoft.com/v1.0/me/calendarview?startdatetime=' + moment().startOf('day').utc().format()
-        + '&enddatetime=' + moment().endOf('day').utc().format(),
+        uri: encodeURI('https://graph.microsoft.com/v1.0/me/calendarview?startdatetime=' + moment().startOf('day').utc().format()
+        + '&enddatetime=' + moment().endOf('day').utc().format()),
         headers: {
             'Authorization': 'Bearer ' + graphToken
         },

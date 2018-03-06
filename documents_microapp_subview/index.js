@@ -49,7 +49,7 @@ function getDocuments(graphToken, context, driveId, itemId) {
         resolveWithFullResponse: true,
         json: true,
         simple: false,
-        uri: 'https://graph.microsoft.com/v1.0/drives/' + driveId + '/items/' + itemId + '/children' ,
+        uri: encodeURI('https://graph.microsoft.com/v1.0/drives/' + driveId + '/items/' + itemId + '/children'),
         headers: {
             'Authorization': 'Bearer ' + graphToken
         },

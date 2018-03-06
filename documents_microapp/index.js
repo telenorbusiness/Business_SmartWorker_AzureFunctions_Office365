@@ -81,7 +81,7 @@ function getDocumentsFromSharepoint(graphToken) {
         method: 'GET',
         json: true,
         simple: true,
-        uri: 'https://graph.microsoft.com/v1.0/sites/' + hostName + ':/sites/' + relativePathName,
+        uri: encodeURI('https://graph.microsoft.com/v1.0/sites/' + hostName + ':/sites/' + relativePathName),
         headers: {
             'Authorization': 'Bearer ' + graphToken
         },
@@ -90,7 +90,7 @@ function getDocumentsFromSharepoint(graphToken) {
     return requestPromise(requestOptions)
         .then(function (body) {
             let siteId = body.id;
-            requestOptions.uri = 'https://graph.microsoft.com/v1.0/sites/' + siteId + '/drive/root/children';
+            requestOptions.uri = encodeURI('https://graph.microsoft.com/v1.0/sites/' + siteId + '/drive/root/children');
             return requestPromise(requestOptions);
         })
         .then(function(response) {

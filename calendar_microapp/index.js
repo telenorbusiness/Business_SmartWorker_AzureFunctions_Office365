@@ -47,8 +47,8 @@ function getAppointments(context, graphToken) {
         resolveWithFullResponse: true,
         json: true,
         simple: true,
-        uri: 'https://graph.microsoft.com/beta/me/calendarview?startdatetime=' + moment().startOf('day').utc().format()
-        + '&enddatetime=' + moment().add(7, 'days').utc().format(),
+        uri: encodeURI('https://graph.microsoft.com/beta/me/calendarview?startdatetime=' + moment().startOf('day').utc().format()
+        + '&enddatetime=' + moment().add(7, 'days').utc().format()),
         headers: {
             'Authorization': 'Bearer ' + graphToken
         }
