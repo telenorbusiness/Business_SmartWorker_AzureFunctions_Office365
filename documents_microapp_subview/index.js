@@ -44,6 +44,7 @@ module.exports = function (context, req) {
 };
 
 function getDocuments(graphToken, context, driveId, itemId) {
+    context.log("token in subview " + graphToken);
     var requestOptions = {
         method: 'GET',
         resolveWithFullResponse: true,
