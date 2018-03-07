@@ -10,15 +10,15 @@ module.exports = function (context, req) {
         })
         .then((response) => {
             if(response.status === 200 && response.azureUserToken) {
-                return getNumOfUnreadMails(response.azureUserToken, context);
+                return getUnreadMails(response.azureUserToken, context);
             }
             else {
                 throw new atWorkValidateError(response.message, response.status);
             }
         })
-        .then((numOfUnreadMails) => {
+        .then((unreadMails) => {
             let res = {
-                body: createTile(numOfUnreadMails)
+                body: createTile(unreadMails)
             };
             return context.done(null, res);
         })
@@ -38,59 +38,53 @@ module.exports = function (context, req) {
         });
 };
 
-function getNumOfUnreadMails(graphToken, context) {
-    let dateOfLastEmail = moment.utc().tz('Europe/Oslo').locale('nb').subtract(14, 'days').format('YYYY-MM-DD');
-    var requestOptions = {
-        method: 'GET',
-        resolveWithFullResponse: true,
-        json: true,
-        simple: false,
-        uri: encodeURI('https://graph.microsoft.com/v1.0/me/messages/$count/?$filter=isRead eq false and ReceivedDateTime ge ' + dateOfLastEmail),
-        headers: {
-            'Accept': 'text/plain',
-            'Authorization': 'Bearer ' + graphToken
-        },
-    };
+function getUnreadMails(graphToken, context) {
+  let dateOfLastEmail = moment.utc().tz('Europe/Oslo').locale('nb').subtract(14, 'days').format('YYYY-MM-DD');
+  var requestOptions = {
+    method: 'GET',
+    resolveWithFullResponse: true,
+    json: true,
+    simple: false,
+    uri: encodeURI('https://graph.microsoft.com/v1.0/me/messages?$filter=isRead eq false and ReceivedDateTime ge ' + dateOfLastEmail),
+    headers: {
+        'Authorization': 'Bearer ' + graphToken
+    },
+  };
 
-    return requestPromise(requestOptions)
-        .then(function (response) {
-            if(response.statusCode === 200) {
-                var numOfUnreadMails = 0;
-                if(response.body) {
-                  numOfUnreadMails = response.body;
-                }
-                return numOfUnreadMails;
-            }
-            else {
-                context.log('Fetching mails returned with status code: ' + response.statusCode);
-                return null;
-            }
-        })
+  return requestPromise(requestOptions)
+    .then(function (response) {
+      if(response.statusCode === 200) {
+        return response.body.value;
+      }
+      else {
+        context.log('Fetching mails returned with status code: ' + response.statusCode);
+        return null;
+      }
+    })
 }
 
-function createTile(numOfUnreadMails) {
-    let tile={};
-    if(numOfUnreadMails !== null) {
-        tile = {
-            type: "icon",
-            iconUrl: "https://i.pinimg.com/736x/5d/a6/54/5da6545d8d46ea858c3507e914b0c027--email-icon-personality-types.jpg",
-            footnote: "Se siste uleste e-post",
-            notifications: numOfUnreadMails,
-            onClick: {
-                type: "micro-app",
-                apiUrl: "https://"+getEnvironmentVariable("appName")+".azurewebsites.net/api/emails_microapp"
-            }
-        };
-    }
-    else {
-        tile = {
-            type: "icon",
-            iconUrl: "https://i.pinimg.com/736x/5d/a6/54/5da6545d8d46ea858c3507e914b0c027--email-icon-personality-types.jpg",
-            footnote: "Kunne ikke hente e-post"
-        };
-    }
+function createTile(unreadMails) {
 
-    return tile;
+  if(unreadMails === null) {
+    return { type: "text", text: "Feil", subtext: "ved henting av e-post" };
+  }
+
+  let tile = {};
+  tile.type = "icon";
+  tile.iconUrl = "https://phandroid.s3.amazonaws.com/wp-content/uploads/2015/01/office-icon.png";
+  tile.footnote = "Ingen nye e-post";
+  tile.notifications = 0;
+  tile.onClick = { type: "micro-app", apiUrl: "https://"+getEnvironmentVariable("appName")+".azurewebsites.net/api/emails_microapp" };
+  let mailAdded = false;
+
+  for(let i = 0; i < unreadMails.length; i++) {
+    if(!mailAdded) {
+      tile.footnote = unreadMails[i].from.emailAddress.name !== "" ? unreadMails[i].from.emailAddress.name : unreadMails[i].from.emailAddress.address;
+    }
+    tile.notifications++;
+  }
+
+  return tile;
 }
 
 function getEnvironmentVariable(name)

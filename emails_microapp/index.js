@@ -65,30 +65,38 @@ function getMails(graphToken) {
 function createMicroApp(mails) {
     var microApp = {
         id: "emails_main",
-        sections: [
-            {
-            header: 'Ulest e-post',
+        sections: [{
             rows: []
-            }
-        ],
+          }],
     };
 
     for (let i = 0; i < mails.value.length; i++) {
-      if(!mails.value[i].isRead){
         microApp.sections[0].rows.push(
           {
             type: "rich-text",
-            title: mails.value[i].subject,
-            text: mails.value[i].sender.emailAddress.address,
-            content: moment.utc(mails.value[i].sentDateTime).tz('Europe/Oslo').locale('nb').format("LLL"),
+            title: mails[i].from.emailAddress.name !== "" ? mails[i].from.emailAddress.name : mails[i].from.emailAddress.address,
+            text: mails.value[i].subject,
+            content: mails[i].bodyPreview,
+            numContentLines: 1,
+            tag: getPrettyDate(mails[i].receivedDateTime),
             onClick: {
               type: "open-url",
               url: mails.value[i].webLink
             }
           });
-      }
     }
     return microApp;
+}
+
+function getPrettyDate(date) {
+  let time = moment.utc(date).tz('Europe/Oslo').locale('nb');
+  let now = moment.utc().tz('Europe/Oslo').locale('nb');
+  if (time.isSame(now, "day")) {
+      return time.format('H:mm');
+  }
+  else {
+      return time.format('Do MMM');
+  }
 }
 
 function getEnvironmentVariable(name)
