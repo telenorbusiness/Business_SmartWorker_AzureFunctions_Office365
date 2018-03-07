@@ -46,7 +46,7 @@ function getMails(graphToken) {
     resolveWithFullResponse: true,
     json: true,
     simple: false,
-    uri: encodeURI('https://graph.microsoft.com/v1.0/me/messages?$filter=ReceivedDateTime ge ' + dateOfLastEmail),
+    uri: encodeURI('https://graph.microsoft.com/v1.0/me/messages?$filter=ReceivedDateTime ge ' + dateOfLastEmail + "&$orderby=ReceivedDateTime desc"),
     headers: {
         'Authorization': 'Bearer ' + graphToken
     },
