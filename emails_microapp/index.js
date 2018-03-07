@@ -40,26 +40,27 @@ module.exports = function (context, req) {
 };
 
 function getMails(graphToken) {
-    var requestOptions = {
-        method: 'GET',
-        resolveWithFullResponse: true,
-        json: true,
-        simple: false,
-        uri: encodeURI('https://graph.microsoft.com/v1.0/me/messages?$filter=isRead eq false&$top=15'),
-        headers: {
-            'Authorization': 'Bearer ' + graphToken
-        },
-    };
+  let dateOfLastEmail = moment.utc().tz('Europe/Oslo').locale('nb').subtract(14, 'days').format('YYYY-MM-DD');
+  var requestOptions = {
+    method: 'GET',
+    resolveWithFullResponse: true,
+    json: true,
+    simple: false,
+    uri: encodeURI('https://graph.microsoft.com/v1.0/me/messages?$filter=ReceivedDateTime ge ' + dateOfLastEmail),
+    headers: {
+        'Authorization': 'Bearer ' + graphToken
+    },
+  };
 
-    return requestPromise(requestOptions)
-        .then(function (response) {
-            if(response.statusCode === 200) {
-                return response.body.value;
-            }
-            else {
-                 throw new Error('Fetching emails returned with status code: ' + response.statusCode + " and message: " + response.body.error.message);
-            }
-        })
+  return requestPromise(requestOptions)
+    .then(function (response) {
+      if(response.statusCode === 200) {
+        return response.body.value;
+      }
+      else {
+         throw new Error('Fetching emails returned with status code: ' + response.statusCode + " and message: " + response.body.error.message);
+      }
+    })
 }
 
 function createMicroApp(mails) {
