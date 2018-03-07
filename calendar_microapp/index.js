@@ -42,12 +42,15 @@ module.exports = function (context, req) {
 };
 
 function getAppointments(context, graphToken) {
+
+    const now = moment().utc().tz('Europe/Oslo').locale('nb').format();
+    const maxDate = moment().add(6, 'months').utc().tz('Europe/Oslo').locale('nb');
     var requestOptions = {
         method: 'GET',
         resolveWithFullResponse: true,
         json: true,
         simple: true,
-        uri: encodeURI('https://graph.microsoft.com/v1.0/me/events?$select=subject,bodyPreview,organizer,start,end,location,responseStatus,webLink'),
+        uri: encodeURI('https://graph.microsoft.com/v1.0/me/calendarview?startdatetime=' + now + '&enddatetime=' + maxDate),
         headers: {
             'Authorization': 'Bearer ' + graphToken
         }
