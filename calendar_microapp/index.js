@@ -42,8 +42,8 @@ module.exports = function (context, req) {
 };
 
 function getAppointments(context, graphToken) {
-    const now = moment().utc().tz('Europe/Oslo').locale('nb').format('YYYY-MM-DD');
-    const maxDate = moment().utc().tz('Europe/Oslo').locale('nb').add(6, 'months').format('YYYY-MM-DD');
+    const now = moment().utc().format('YYYY-MM-DD');
+    const maxDate = moment().utc().add(6, 'months').format('YYYY-MM-DD');
     var requestOptions = {
         method: 'GET',
         resolveWithFullResponse: true,
@@ -76,10 +76,11 @@ function createMicroApp(appointments) {
   let sectionIndex = -1;
   let lastRespondedDay = '';
   let maxDate = moment().add(14, 'days').utc().tz('Europe/Oslo').locale('nb');
+  let now = moment.utc().tz('Europe/Oslo').locale('nb');
 
   for(let i = 0; i < appointments.length; i++) {
     let appointmentDate = moment.utc(appointments[i].start.dateTime).tz('Europe/Oslo').locale('nb');
-    if(appointments[i].responseStatus.response === "notResponded") {
+    if(appointments[i].responseStatus.response === "notResponded" && appointmentDate.isAfter(now)) {
       notRespondedRows.push({
         type: "rich-text",
         title: appointments[i].subject,

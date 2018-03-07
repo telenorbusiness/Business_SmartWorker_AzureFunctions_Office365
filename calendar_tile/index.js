@@ -41,8 +41,8 @@ module.exports = function (context, req) {
 };
 
 function getAppointments(context, graphToken) {
-    const now = moment().utc().tz('Europe/Oslo').format('YYYY-MM-DDTHH:mm:ss');
-    const maxDate = moment().utc().tz('Europe/Oslo').add(6, 'months').format('YYYY-MM-DD');
+    const now = moment().utc().format('YYYY-MM-DDTHH:mm:ss');
+    const maxDate = moment().utc().add(6, 'months').format('YYYY-MM-DD');
     var requestOptions = {
         method: 'GET',
         resolveWithFullResponse: true,
