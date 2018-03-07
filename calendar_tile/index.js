@@ -41,7 +41,8 @@ module.exports = function (context, req) {
 };
 
 function getAppointments(context, graphToken) {
-    const now = moment().utc().format('YYYY-MM-DDTHH:mm:ss');
+    const now = moment().tz('Europe/Oslo').utc().format('YYYY-MM-DDTHH:mm:ss');
+    context.log("Date now: " + now);
     const maxDate = moment().utc().add(6, 'months').format('YYYY-MM-DD');
     var requestOptions = {
         method: 'GET',
@@ -93,7 +94,7 @@ function createTile(appointments) {
       }
       else if(!appointmentAdded) {
         tile.text = getPrettyDate(appointments[i].start.dateTime);
-        tile.subtext = "kl " + getPrettyTime(appointments[i].start.dateTime);
+        tile.subtext = "kl " + getPrettyTime(appointments[i].start.dateTime) + " - " + getPrettyTime(appointments[i].end.dateTime);
         tile.footnote = appointments[i].subject;
         appointmentAdded = true;
       }
