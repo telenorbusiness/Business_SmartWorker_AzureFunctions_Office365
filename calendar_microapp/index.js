@@ -47,8 +47,7 @@ function getAppointments(context, graphToken) {
         resolveWithFullResponse: true,
         json: true,
         simple: true,
-        uri: encodeURI('https://graph.microsoft.com/beta/me/calendarview?startdatetime=' + moment().startOf('day').utc().format()
-        + '&enddatetime=' + moment().add(7, 'days').utc().format()),
+        uri: encodeURI('https://graph.microsoft.com/v1.0/me/events?$select=subject,bodyPreview,organizer,start,end,location,responseStatus,webLink'),
         headers: {
             'Authorization': 'Bearer ' + graphToken
         }
@@ -69,6 +68,69 @@ function getAppointments(context, graphToken) {
 }
 
 function createMicroApp(appointments) {
+  let notRespondedRows = [];
+  let respondedRows = [];
+  let sections = [];
+  let sectionIndex = -1;
+  let lastRespondedDay = '';
+  let maxDate = moment().add(14, 'days').utc().tz('Europe/Oslo').locale('nb');
+
+  for(let i = 0; i < appointments.length; i++) {
+    let appointmentDate = moment.utc(appointments[i].start.dateTime).tz('Europe/Oslo').locale('nb');
+    if(appointments[i].responseStatus.response === "NotResponded") {
+      notRespondedRows.push({
+        type: "rich-text",
+        title: appointments[i].subject,
+        text: getPrettyDate(appointmentDate),
+        tag: getPrettyTime(appointmentDate),
+        onClick: {
+          type: "open-url",
+          url: appointments[i].webLink
+        }
+      });
+    }
+    else if(appointmentDate.isBefore(maxDate)) {
+      if(!appointmentDate.isSame(lastRespondedDay, 'day')) {
+        sections.push({
+          header: getPrettyDate(appointmentDate),
+          rows: []
+        });
+        sectionIndex++;
+      }
+      sections[sectionIndex].rows.push({
+          type: "rich-text",
+          title: appointments[i].subject,
+          text: appointments[i].location.displayName,
+          content: appointments[i].bodyPreview,
+          tag: getPrettyTime(appointmentDate)
+      });
+      lastRespondedDay = appointmentDate;
+    }
+  }
+
+  if(notRespondedRows.length !== 0) {
+    sections.unshift({
+      header: "Invitasjoner",
+      rows: notRespondedRows
+    });
+  }
+
+  let microApp = {
+    id: "calendar_main",
+    sections: sections
+  };
+
+  if(microApp.sections.length === 0) {
+      microApp.sections.push({
+          rows: [{
+              type: "text",
+              title: "Ingen avtaler å vise"
+          }]
+      });
+  }
+  return microApp;
+
+  /*
     let rows = [];
 
     let microApp = {
@@ -112,7 +174,7 @@ function createMicroApp(appointments) {
             }]
         });
     }
-    return microApp;
+    return microApp;*/
 }
 
 function getEnvironmentVariable(name)
@@ -120,14 +182,20 @@ function getEnvironmentVariable(name)
     return process.env[name];
 }
 
-function getPrettyDate(callDateTime) {
-    let time = moment.utc(callDateTime).tz('Europe/Oslo').locale('nb');
-    if (time.isSame(new Date(), "day")) {
-        return time.format('LT');
-    }
-    else {
-        return time.format('LT');
-    }
+function getPrettyDate(date) {
+  let time = moment.utc(date).tz('Europe/Oslo').locale('nb');
+  if (time.isSame(new Date(), "day")) {
+      return "Idag";
+  }
+  else {
+      return time.format('dddd Do MMM');
+  }
+}
+
+function getPrettyTime(date) {
+  let time = moment.utc(date).tz('Europe/Oslo').locale('nb');
+
+  return time.format('H:mm');
 }
 
 function getDay(dayNumber) {
