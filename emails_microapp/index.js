@@ -54,7 +54,7 @@ function getMails(graphToken) {
     return requestPromise(requestOptions)
         .then(function (response) {
             if(response.statusCode === 200) {
-                return response.body;
+                return response.body.value;
             }
             else {
                  throw new Error('Fetching emails returned with status code: ' + response.statusCode + " and message: " + response.body.error.message);
@@ -63,29 +63,38 @@ function getMails(graphToken) {
 }
 
 function createMicroApp(mails) {
-    var microApp = {
-        id: "emails_main",
-        sections: [{
-            rows: []
-          }],
-    };
 
-    for (let i = 0; i < mails.value.length; i++) {
-        microApp.sections[0].rows.push(
-          {
-            type: "rich-text",
-            title: mails[i].from.emailAddress.name !== "" ? mails[i].from.emailAddress.name : mails[i].from.emailAddress.address,
-            text: mails.value[i].subject,
-            content: mails[i].bodyPreview,
-            numContentLines: 1,
-            tag: getPrettyDate(mails[i].receivedDateTime),
-            onClick: {
-              type: "open-url",
-              url: mails.value[i].webLink
-            }
-          });
-    }
+  var microApp = {
+    id: "emails_main",
+    sections: [{
+        rows: []
+      }],
+  };
+
+  if(mails === null || mails.length === 0 ) {
+    microApp.sections[0].rows.push({
+      type: "text",
+      title: "Ingen e-post å vise"
+    });
     return microApp;
+  }
+
+  for (let i = 0; i < mails.length; i++) {
+    microApp.sections[0].rows.push(
+      {
+        type: "rich-text",
+        title: mails[i].from.emailAddress.name !== "" ? mails[i].from.emailAddress.name : mails[i].from.emailAddress.address,
+        text: mails[i].subject,
+        content: mails[i].bodyPreview,
+        numContentLines: 1,
+        tag: getPrettyDate(mails[i].receivedDateTime),
+        onClick: {
+          type: "open-url",
+          url: mails[i].webLink
+        }
+      });
+  }
+  return microApp;
 }
 
 function getPrettyDate(date) {
