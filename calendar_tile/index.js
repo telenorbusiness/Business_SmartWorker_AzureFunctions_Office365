@@ -42,7 +42,6 @@ module.exports = function (context, req) {
 
 function getAppointments(context, graphToken) {
     const now = moment().tz('Europe/Oslo').utc().format('YYYY-MM-DDTHH:mm:ss');
-    context.log("Date now: " + now);
     const maxDate = moment().utc().add(6, 'months').format('YYYY-MM-DD');
     var requestOptions = {
         method: 'GET',

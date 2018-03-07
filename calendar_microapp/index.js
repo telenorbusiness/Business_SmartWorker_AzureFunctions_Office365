@@ -88,7 +88,7 @@ function createMicroApp(appointments) {
         tag: getPrettyTime(appointmentDate),
         onClick: {
           type: "open-url",
-          url: appointments[i].webLink
+          url: encodeURI(appointments[i].webLink)
         }
       });
     }
@@ -105,7 +105,12 @@ function createMicroApp(appointments) {
           title: appointments[i].subject,
           text: appointments[i].location.displayName,
           content: appointments[i].bodyPreview,
-          tag: getPrettyTime(appointmentDate)
+          tag: getPrettyTime(appointmentDate),
+          numContentLines: 1,
+          onClick: {
+            type: "open-url",
+            url: encodeURI(appointments[i].webLink)
+          }
       });
       lastRespondedDay = appointmentDate;
     }
