@@ -42,9 +42,8 @@ module.exports = function (context, req) {
 };
 
 function getAppointments(context, graphToken) {
-
-    const now = moment().utc().tz('Europe/Oslo').locale('nb').format();
-    const maxDate = moment().add(6, 'months').utc().tz('Europe/Oslo').locale('nb');
+    const now = moment().utc().tz('Europe/Oslo').locale('nb').format('YYYY-MM-DD');
+    const maxDate = moment().utc().tz('Europe/Oslo').locale('nb').add(6, 'months').format('YYYY-MM-DD');
     var requestOptions = {
         method: 'GET',
         resolveWithFullResponse: true,
