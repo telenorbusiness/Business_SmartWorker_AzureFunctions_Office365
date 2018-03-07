@@ -87,11 +87,11 @@ function createTile(appointments) {
     let appointmentAdded = false;
 
     for(let i = 0; i < appointments.length; i++) {
-      if(appointments[i].responseStatus.response === "NotResponded") {
+      if(appointments[i].responseStatus.response === "notResponded") {
         tile.notifications++;
         continue;
       }
-      if(!appointmentAdded) {
+      else if(!appointmentAdded) {
         tile.text = getPrettyDate(appointments[i].start.dateTime);
         tile.subtext = "kl " + getPrettyTime(appointments[i].start.dateTime);
         tile.footnote = appointments[i].subject;

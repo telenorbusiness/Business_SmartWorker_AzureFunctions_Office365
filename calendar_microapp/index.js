@@ -79,7 +79,7 @@ function createMicroApp(appointments) {
 
   for(let i = 0; i < appointments.length; i++) {
     let appointmentDate = moment.utc(appointments[i].start.dateTime).tz('Europe/Oslo').locale('nb');
-    if(appointments[i].responseStatus.response === "NotResponded") {
+    if(appointments[i].responseStatus.response === "notResponded") {
       notRespondedRows.push({
         type: "rich-text",
         title: appointments[i].subject,
