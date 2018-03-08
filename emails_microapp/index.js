@@ -84,7 +84,7 @@ function createMicroApp(mails) {
     microApp.sections[0].rows.push(
       {
         type: "rich-text",
-        thumbnailUrl: mails[i].isRead ? "https://d30y9cdsu7xlg0.cloudfront.net/png/394074-200.png" : "https://upload.wikimedia.org/wikipedia/commons/6/60/Contact_vmc2015.png",
+        thumbnailUrl: mails[i].isRead ? "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/lestmail.png" : "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/ulestmail.png",
         title: mails[i].from.emailAddress.name !== "" ? mails[i].from.emailAddress.name : mails[i].from.emailAddress.address,
         text: mails[i].subject,
         content: mails[i].bodyPreview,

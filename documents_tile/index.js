@@ -1,6 +1,7 @@
 var Promise = require('bluebird');
 var requestPromise = require('request-promise');
 const reftokenAuth = require('../auth');
+var moment = require('moment-timezone');
 
 module.exports = function (context, req) {
         Promise
@@ -37,7 +38,7 @@ module.exports = function (context, req) {
 function createTile() {
     var tile = {
         "type": "icon",
-        "iconUrl": "https://cdn4.iconfinder.com/data/icons/universal-web-vol-1/256/43-512.png",
+        "iconUrl": "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/dokumenter.png",
         "footnote": "Se delte dokumenter",
         "onClick": {
         "type": "micro-app",

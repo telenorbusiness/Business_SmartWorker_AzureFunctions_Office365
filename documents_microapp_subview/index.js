@@ -1,12 +1,14 @@
 var Promise = require('bluebird');
 var requestPromise = require('request-promise');
 const reftokenAuth = require('../auth');
+var moment = require('moment-timezone');
 
 module.exports = function (context, req) {
     const folderName = req.body.folderName;
     const depth = req.body.depth;
     const driveId = req.body.driveId;
     const itemId = req.body.itemId;
+    context.log("Body ser slik ut: " + JSON.stringify(req.body));
     Promise
         .try(() =>  {
             return reftokenAuth(req);
@@ -44,6 +46,7 @@ module.exports = function (context, req) {
 };
 
 function getDocuments(graphToken, context, driveId, itemId) {
+    context.log("URI som blir sendt: " + encodeURI('https://graph.microsoft.com/v1.0/drives/' + driveId + '/items/' + itemId + '/children'));
     var requestOptions = {
         method: 'GET',
         resolveWithFullResponse: true,
@@ -74,8 +77,10 @@ function createMicroApp(documents, folderName, depth) {
     for (let i = 0; i < documents.value.length; i++) {
         if(!documents.value[i].folder) {
             fileRows.push({
-                type: "text",
+                type: "rich-text",
                 title: documents.value[i].name,
+                tag: getPrettyDate(documents.value[i].lastModifiedDateTime),
+                thumbnailUrl: "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/files.png",
                 onClick: {
                 type: "open-url",
                 url: documents.value[i].webUrl
@@ -96,8 +101,10 @@ function createMicroApp(documents, folderName, depth) {
                 itemId = documents.value[i].id;
             }
             folderRows.push({
-                type: "text",
+                type: "rich-text",
                 title: documents.value[i].name,
+                tag: getPrettyDate(documents.value[i].lastModifiedDateTime),
+                thumbnailUrl: "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/folder.png",
                 onClick: {
                     type: "call-api",
                     url: "https://"+getEnvironmentVariable("appName")+".azurewebsites.net/api/documents_microapp_subview",
@@ -134,6 +141,17 @@ function createMicroApp(documents, folderName, depth) {
 function getEnvironmentVariable(name)
 {
     return process.env[name];
+}
+
+function getPrettyDate(date) {
+  let time = moment.utc(date).tz('Europe/Oslo').locale('nb');
+  let now = moment.utc().tz('Europe/Oslo').locale('nb');
+  if (time.isSame(now, "day")) {
+      return time.format('H:mm');
+  }
+  else {
+      return time.format('Do MMM');
+  }
 }
 
 class atWorkValidateError extends Error {

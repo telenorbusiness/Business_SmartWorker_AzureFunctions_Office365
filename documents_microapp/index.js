@@ -1,6 +1,7 @@
 var Promise = require('bluebird');
 var requestPromise = require('request-promise');
 const reftokenAuth = require('../auth');
+var moment = require('moment-timezone');
 
 module.exports = function (context, req) {
     let graphToken;
@@ -108,8 +109,10 @@ function createMicroApp(documents) {
     for (let i = 0; i < documents.value.length; i++) {
         if(!documents.value[i].folder) {
             fileRows.push({
-                type: "text",
+                type: "rich-text",
                 title: documents.value[i].name,
+                tag: getPrettyDate(documents.value[i].lastModifiedDateTime),
+                thumbnailUrl: "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/files.png",
                 onClick: {
                 type: "open-url",
                 url: documents.value[i].webUrl
@@ -130,8 +133,10 @@ function createMicroApp(documents) {
                 itemId = documents.value[i].id;
             }
             folderRows.push({
-                type: "text",
+                type: "rich-text",
                 title: documents.value[i].name,
+                tag: getPrettyDate(documents.value[i].lastModifiedDateTime),
+                thumbnailUrl: "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/folder.png",
                 onClick: {
                     type: "call-api",
                     url: "https://"+getEnvironmentVariable("appName")+".azurewebsites.net/api/documents_microapp_subview",
@@ -163,6 +168,17 @@ function createMicroApp(documents) {
     };
 
     return microApp;
+}
+
+function getPrettyDate(date) {
+  let time = moment.utc(date).tz('Europe/Oslo').locale('nb');
+  let now = moment.utc().tz('Europe/Oslo').locale('nb');
+  if (time.isSame(now, "day")) {
+      return time.format('H:mm');
+  }
+  else {
+      return time.format('Do MMM');
+  }
 }
 
 function getEnvironmentVariable(name)
