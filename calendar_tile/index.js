@@ -99,9 +99,19 @@ function createTile(appointments) {
   };
 
   let appointmentAdded = false;
+  let now = moment
+    .utc()
+    .tz("Europe/Oslo")
+    .locale("nb");
 
   for (let i = 0; i < appointments.length; i++) {
-    if (appointments[i].responseStatus.response === "notResponded") {
+    let appointmentDate = moment
+      .utc(appointments[i].start.dateTime)
+      .tz("Europe/Oslo")
+      .locale("nb");
+    if (appointmentDate.isBefore(now)) {
+      continue;
+    } else if (appointments[i].responseStatus.response === "notResponded") {
       tile.notifications++;
       continue;
     } else if (!appointmentAdded) {

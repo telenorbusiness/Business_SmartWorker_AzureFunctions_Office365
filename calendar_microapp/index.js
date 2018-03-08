@@ -98,10 +98,9 @@ function createMicroApp(appointments) {
       .utc(appointments[i].start.dateTime)
       .tz("Europe/Oslo")
       .locale("nb");
-    if (
-      appointments[i].responseStatus.response === "notResponded" &&
-      appointmentDate.isAfter(now)
-    ) {
+    if (appointmentDate.isBefore(now)) {
+      continue;
+    } else if (appointments[i].responseStatus.response === "notResponded") {
       notRespondedRows.push({
         type: "rich-text",
         title: appointments[i].subject,
