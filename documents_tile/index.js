@@ -13,7 +13,10 @@ module.exports = function(context, req) {
         graphToken = response.azureUserToken;
         return getDocumentsFromSharepoint(response.azureToken, context);
       } else {
-        throw new atWorkValidateError(response.message, response.status);
+        throw new atWorkValidateError(
+          JSON.stringify(response.message),
+          response.status
+        );
       }
     })
     .catch(sharePointError, error => {

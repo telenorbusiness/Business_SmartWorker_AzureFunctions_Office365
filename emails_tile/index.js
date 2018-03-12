@@ -11,7 +11,10 @@ module.exports = function(context, req) {
       if (response.status === 200 && response.azureUserToken) {
         return getUnreadMails(response.azureUserToken, context);
       } else {
-        throw new atWorkValidateError(response.message, response.status);
+        throw new atWorkValidateError(
+          JSON.stringify(response.message),
+          response.status
+        );
       }
     })
     .then(unreadMails => {

@@ -8,6 +8,7 @@ module.exports = function(context, req) {
   let graphToken;
   let sub;
   Promise.try(() => {
+    context.log("Før ref token auth");
     return reftokenAuth(req);
   })
     .then(response => {
@@ -75,10 +76,10 @@ module.exports = function(context, req) {
 };
 
 function getStorageInfo(rowKey, context) {
-  let tableService = azure.createTableService(
-    getEnvironmentVariable("AzureWebJobsStorage")
-  );
   return new Promise((resovle, reject) => {
+    let tableService = azure.createTableService(
+      getEnvironmentVariable("AzureWebJobsStorage")
+    );
     tableService.retrieveEntity(
       "userSites",
       "user_sharepointsites",
@@ -88,7 +89,7 @@ function getStorageInfo(rowKey, context) {
           context.log("setter her");
           resolve(result.sharepointId);
         } else {
-          context("Thrower");
+          context.log("Thrower");
           throw new tableStorageError(error);
         }
       }
