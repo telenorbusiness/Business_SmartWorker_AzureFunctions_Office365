@@ -2,7 +2,7 @@ var Promise = require("bluebird");
 var requestPromise = require("request-promise");
 const reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
-var azure = require('azure-storage');
+var azure = require("azure-storage");
 
 module.exports = function(context, req) {
   let graphToken;
@@ -16,16 +16,19 @@ module.exports = function(context, req) {
         graphToken = response.azureUserToken;
         sub = response.sub;
         let sharepointId = req.query.sharepointId;
-        if(sharepointId) {
+        if (sharepointId) {
+          context.log("sharepointid in query");
           insertUserinfo(sub, sharepointId);
           return sharepointId;
         }
-        return getStorageInfo(sub);
+        context.log("Before getStorageInfo");
+        return getStorageInfo(sub, context);
       } else {
         throw new atWorkValidateError(response.message, response.status);
       }
     })
-    .then((sharepointId) => {
+    .then(sharepointId => {
+      context.log("Before getDocumentsFromSharepoint with id: " + sharepointId);
       return getDocumentsFromSharepoint(graphToken, sharepointId);
     })
     .catch(sharePointError, error => {
@@ -36,6 +39,7 @@ module.exports = function(context, req) {
       return getDocuments(graphToken, context);
     })
     .then(documents => {
+      context.log("Before createMicroApp");
       let res = {
         body: createMicroApp(documents)
       };
@@ -45,17 +49,18 @@ module.exports = function(context, req) {
       context.log("Finding userSites returned with: " + error);
       return getSites(graphToken);
     })
-    .then((sharepointSites) => {
+    .then(sharepointSites => {
+      context.log("Before createSelectionMicroApp");
       let res = {
         body: createSelectionMicroApp(sharepointSites)
       };
       return context.done(null, res);
     })
     .catch(atWorkValidateError, error => {
-      context.log("Logger: " + error.response);
+      context.log("Logger: " + error);
       let res = {
         status: error.response,
-        body: JSON.parse(error.message)
+        body: JSON.parse(error)
       };
       return context.done(null, res);
     })
@@ -69,42 +74,61 @@ module.exports = function(context, req) {
     });
 };
 
-function getStorageInfo(rowKey) {
-
-  let tableService = azure.createTableService(getEnvironmentVariable('AzureWebJobsStorage'));
-  tableService.retrieveEntity('userSites', 'user_sharepointsites', rowKey, (error, result, response) => {
-    if(!err) {
-      return result.sharepointId;
-    }
-    else {
-      throw new tableStorageError(error);
-    }
+function getStorageInfo(rowKey, context) {
+  let tableService = azure.createTableService(
+    getEnvironmentVariable("AzureWebJobsStorage")
+  );
+  return new Promise((resovle, reject) => {
+    tableService.retrieveEntity(
+      "userSites",
+      "user_sharepointsites",
+      rowKey,
+      (error, result, response) => {
+        if (!error) {
+          context.log("setter her");
+          resolve(result.sharepointId);
+        } else {
+          context("Thrower");
+          throw new tableStorageError(error);
+        }
+      }
+    );
   });
 
+  context.log("Kommer her");
 }
 
 function insertUserInfo(userId, sharepointId) {
-  let tableService = azure.createTableService(getEnvironmentVariable('AzureWebJobsStorage'));
+  let tableService = azure.createTableService(
+    getEnvironmentVariable("AzureWebJobsStorage")
+  );
   let entGen = azure.TableUtilities.entityGenerator;
-  tableService.createTableIfNotExists('userSites', (error, result, response) => {
-      if(!error) {
-          context.log("Table created? -> " + JSON.stringify(result));
-          let entity = {
-            PartitionKey: entGen.String('user_sharepointsites'),
-            RowKey: entGen.String(userId),
-            sharepointId: entGen.String(sharepointId)
-          };
-          tableService.insertEntity('userSites', entity, (error, result, response) => {
-            if(!error) {
+  tableService.createTableIfNotExists(
+    "userSites",
+    (error, result, response) => {
+      if (!error) {
+        context.log("Table created? -> " + JSON.stringify(result));
+        let entity = {
+          PartitionKey: entGen.String("user_sharepointsites"),
+          RowKey: entGen.String(userId),
+          sharepointId: entGen.String(sharepointId)
+        };
+        tableService.insertEntity(
+          "userSites",
+          entity,
+          (error, result, response) => {
+            if (!error) {
               context.log("Added sharepointid connection to user");
             }
-          });
+          }
+        );
       }
-  });
+    }
+  );
 }
 
 function getSites(graphToken) {
-    var requestOptions = {
+  var requestOptions = {
     method: "GET",
     json: true,
     simple: false,
@@ -114,13 +138,12 @@ function getSites(graphToken) {
     }
   };
 
-  return requestPromise(requestOptions).then((response)=> {
+  return requestPromise(requestOptions).then(response => {
     return response.value;
   });
 }
 
 function createSelectionMicroApp(siteRows = []) {
-
   const rows = siteRows.map(site => {
     let row = {
       type: "text",
@@ -179,10 +202,9 @@ function getDocumentsFromSharepoint(graphToken, sharepointId) {
   //let hostName = getEnvironmentVariable("sharepointHostName");
   //let relativePathName = getEnvironmentVariable("sharepointRelativePathName");
 
-  if (!hostName || !relativePathName) {
+  /* if (!hostName || !relativePathName) {
     throw new sharePointError("Sharepoint vars not set");
-  }
-
+  }*/
   var requestOptions = {
     method: "GET",
     json: true,
