@@ -2,19 +2,31 @@ var Promise = require("bluebird");
 var requestPromise = require("request-promise");
 const reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
+var azure = require('azure-storage');
 
 module.exports = function(context, req) {
   let graphToken;
+  let sub;
   Promise.try(() => {
     return reftokenAuth(req);
   })
     .then(response => {
-      if (response.status === 200 && response.azureUserToken) {
+      context.log("Response from SA: " + JSON.stringify(response));
+      if (response.status === 200 && response.azureUserToken && response.sub) {
         graphToken = response.azureUserToken;
-        return getDocumentsFromSharepoint(response.azureToken, context);
+        sub = response.sub;
+        let sharepointId = req.query.sharepointId;
+        if(sharepointId) {
+          insertUserinfo(sub, sharepointId);
+          return sharepointId;
+        }
+        return getStorageInfo(sub);
       } else {
         throw new atWorkValidateError(response.message, response.status);
       }
+    })
+    .then((sharepointId) => {
+      return getDocumentsFromSharepoint(graphToken, sharepointId);
     })
     .catch(sharePointError, error => {
       context.log(error);
@@ -26,6 +38,16 @@ module.exports = function(context, req) {
     .then(documents => {
       let res = {
         body: createMicroApp(documents)
+      };
+      return context.done(null, res);
+    })
+    .catch(tableStorageError, error => {
+      context.log("Finding userSites returned with: " + error);
+      return getSites(graphToken);
+    })
+    .then((sharepointSites) => {
+      let res = {
+        body: createSelectionMicroApp(sharepointSites)
       };
       return context.done(null, res);
     })
@@ -46,6 +68,86 @@ module.exports = function(context, req) {
       return context.done(null, res);
     });
 };
+
+function getStorageInfo(rowKey) {
+
+  let tableService = azure.createTableService(getEnvironmentVariable('AzureWebJobsStorage'));
+  tableService.retrieveEntity('userSites', 'user_sharepointsites', rowKey, (error, result, response) => {
+    if(!err) {
+      return result.sharepointId;
+    }
+    else {
+      throw new tableStorageError(error);
+    }
+  });
+
+}
+
+function insertUserInfo(userId, sharepointId) {
+  let tableService = azure.createTableService(getEnvironmentVariable('AzureWebJobsStorage'));
+  let entGen = azure.TableUtilities.entityGenerator;
+  tableService.createTableIfNotExists('userSites', (error, result, response) => {
+      if(!error) {
+          context.log("Table created? -> " + JSON.stringify(result));
+          let entity = {
+            PartitionKey: entGen.String('user_sharepointsites'),
+            RowKey: entGen.String(userId),
+            sharepointId: entGen.String(sharepointId)
+          };
+          tableService.insertEntity('userSites', entity, (error, result, response) => {
+            if(!error) {
+              context.log("Added sharepointid connection to user");
+            }
+          });
+      }
+  });
+}
+
+function getSites(graphToken) {
+    var requestOptions = {
+    method: "GET",
+    json: true,
+    simple: false,
+    uri: "https://graph.microsoft.com/v1.0/sites?search=",
+    headers: {
+      Authorization: "Bearer " + graphToken
+    }
+  };
+
+  return requestPromise(requestOptions).then((response)=> {
+    return response.value;
+  });
+}
+
+function createSelectionMicroApp(siteRows = []) {
+
+  const rows = siteRows.map(site => {
+    let row = {
+      type: "text",
+      title: site.displayName,
+      onClick: {
+        type: "reload",
+        queryParameters: { sharepointId: site.id }
+      }
+    };
+    return row;
+  });
+
+  let microApp = {
+    id: "documents_selection",
+    search: {
+      type: "local",
+      placeholder: "Søk etter ditt område"
+    },
+    sections: [
+      {
+        header: "Velg ditt delte område",
+        rows: rows
+      }
+    ]
+  };
+  return microApp;
+}
 
 function getDocuments(graphToken, context) {
   var requestOptions = {
@@ -73,12 +175,12 @@ function getDocuments(graphToken, context) {
   });
 }
 
-function getDocumentsFromSharepoint(graphToken) {
-  let hostName = getEnvironmentVariable("sharepointHostName");
-  let relativePathName = getEnvironmentVariable("sharepointRelativePathName");
+function getDocumentsFromSharepoint(graphToken, sharepointId) {
+  //let hostName = getEnvironmentVariable("sharepointHostName");
+  //let relativePathName = getEnvironmentVariable("sharepointRelativePathName");
 
   if (!hostName || !relativePathName) {
-    throw new sharePointError("Sharepoint env vars not set");
+    throw new sharePointError("Sharepoint vars not set");
   }
 
   var requestOptions = {
@@ -87,9 +189,8 @@ function getDocumentsFromSharepoint(graphToken) {
     simple: true,
     uri: encodeURI(
       "https://graph.microsoft.com/v1.0/sites/" +
-        hostName +
-        ":/sites/" +
-        relativePathName
+        sharepointId +
+        "/drive/root/children"
     ),
     headers: {
       Authorization: "Bearer " + graphToken
@@ -97,15 +198,6 @@ function getDocumentsFromSharepoint(graphToken) {
   };
 
   return requestPromise(requestOptions)
-    .then(function(body) {
-      let siteId = body.id;
-      requestOptions.uri = encodeURI(
-        "https://graph.microsoft.com/v1.0/sites/" +
-          siteId +
-          "/drive/root/children"
-      );
-      return requestPromise(requestOptions);
-    })
     .then(function(response) {
       return response;
     })
@@ -178,7 +270,6 @@ function createMicroApp(documents) {
     },
     sections: [
       {
-        header: "Dokumenter",
         searchableParameters: ["title"],
         rows: folderRows.concat(fileRows)
       }
@@ -216,6 +307,12 @@ class atWorkValidateError extends Error {
 }
 
 class sharePointError extends Error {
+  constructor(message) {
+    super(message);
+  }
+}
+
+class tableStorageError extends Error {
   constructor(message) {
     super(message);
   }
