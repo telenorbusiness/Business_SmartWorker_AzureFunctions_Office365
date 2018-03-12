@@ -2,7 +2,7 @@ var Promise = require("bluebird");
 var requestPromise = require("request-promise");
 const reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
-var azure = require("azure-storage");
+var azure = Promise.promisifyAll(require("azure-storage"));
 
 module.exports = function(context, req) {
   let graphToken;
@@ -19,8 +19,7 @@ module.exports = function(context, req) {
         let sharepointId = req.query.sharepointId;
         if (sharepointId) {
           context.log("sharepointid in query");
-          insertUserinfo(sub, sharepointId);
-          return sharepointId;
+          return insertUserInfo(sub, sharepointId, context);
         }
         context.log("Before getStorageInfo");
         return getStorageInfo(sub, context);
@@ -76,56 +75,40 @@ module.exports = function(context, req) {
 };
 
 function getStorageInfo(rowKey, context) {
-  return new Promise((resovle, reject) => {
     let tableService = azure.createTableService(
       getEnvironmentVariable("AzureWebJobsStorage")
     );
-    tableService.retrieveEntity(
-      "userSites",
-      "user_sharepointsites",
-      rowKey,
-      (error, result, response) => {
-        if (!error) {
-          context.log("setter her");
-          resolve(result.sharepointId);
-        } else {
-          context.log("Thrower");
-          throw new tableStorageError(error);
-        }
-      }
-    );
-  });
-
+   return tableService.retrieveEntityAsync("userSites","user_sharepointsites",rowKey)
+    .then((result) => {
+      context.log("Response: " + JSON.stringify(result));
+      return result.sharepointId;
+    })
+    .catch((error) => {
+      throw new tableStorageError(error);
+    });
   context.log("Kommer her");
 }
 
-function insertUserInfo(userId, sharepointId) {
+function insertUserInfo(userId, sharepointId, context) {
   let tableService = azure.createTableService(
     getEnvironmentVariable("AzureWebJobsStorage")
   );
   let entGen = azure.TableUtilities.entityGenerator;
-  tableService.createTableIfNotExists(
-    "userSites",
-    (error, result, response) => {
-      if (!error) {
-        context.log("Table created? -> " + JSON.stringify(result));
-        let entity = {
-          PartitionKey: entGen.String("user_sharepointsites"),
-          RowKey: entGen.String(userId),
-          sharepointId: entGen.String(sharepointId)
-        };
-        tableService.insertEntity(
-          "userSites",
-          entity,
-          (error, result, response) => {
-            if (!error) {
-              context.log("Added sharepointid connection to user");
-            }
-          }
-        );
-      }
-    }
-  );
+
+  return tableService.createTableIfNotExistsAsync("userSites")
+    .then((response) => {
+      context.log("Table created? ->" + JSON.stringify(response));
+      let entity = {
+        PartitionKey: entGen.String("user_sharepointsites"),
+        RowKey: entGen.String(userId),
+        sharepointId: entGen.String(sharepointId)
+      };
+      return tableService.insertEntityAsync("userSites", entity);
+    })
+    .then((result) => {
+      context.log("Added row! -> " + JSON.stringify(result));
+      return sharepointId;
+    });
 }
 
 function getSites(graphToken) {
