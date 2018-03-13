@@ -17,11 +17,6 @@ module.exports = function(context, req) {
       if (response.status === 200 && response.azureUserToken && response.sub) {
         graphToken = response.azureUserToken;
         sub = getUpnFromJWT(graphToken, context);
-        let sharepointId = req.query.sharepointId;
-        if (sharepointId) {
-          context.log("sharepointid in query");
-          return insertUserInfo(sub, sharepointId, context);
-        }
         context.log("Before getStorageInfo");
         return getStorageInfo(sub, context);
       } else {
