@@ -310,8 +310,8 @@ function createEmptyMicroApp() {
       {
         rows: [
           {
-            type: "text",
-            title: "Det er ingen sharepoint sider knyttet til din bruker"
+            type: "rich-text",
+            content: "Det er ingen sharepoint sider knyttet til din bruker"
           }
         ]
       }
