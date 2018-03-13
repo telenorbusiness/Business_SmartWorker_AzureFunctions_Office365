@@ -61,7 +61,6 @@ function getMails(graphToken, context) {
 
   return requestPromise(requestOptions).then(function(response) {
     if (response.statusCode === 200) {
-      context.log(JSON.stringify(response));
       return response.body.value;
     } else {
       throw new Error(

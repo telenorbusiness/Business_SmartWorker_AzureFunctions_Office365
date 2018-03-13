@@ -92,13 +92,11 @@ function createTile(unreadMails) {
     tile.notifications++;
   }
 
-  if(tile.notifications === 0) {
+  if (tile.notifications === 0) {
     tile.footnote = "Du har ingen uleste e-post";
-  }
-  else if(tile.notifications === 1) {
+  } else if (tile.notifications === 1) {
     tile.footnote = "Du har 1 ulest e-post";
-  }
-  else {
+  } else {
     tile.footnote = "Du har " + tile.notifications + " uleste e-post";
   }
   return tile;

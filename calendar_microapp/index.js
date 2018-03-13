@@ -155,52 +155,6 @@ function createMicroApp(appointments) {
     ]
   });
   return microApp;
-
-  /*
-    let rows = [];
-
-    let microApp = {
-        id: "calendar_main",
-        sections: []
-    };
-    if(appointments[0]) {
-     var lastDay = moment.utc(appointments[0].start.dateTime).tz('Europe/Oslo').locale('nb').day();
-    }
-    for(let i = 0; i < appointments.length; i++) {
-        let day = moment.utc(appointments[i].start.dateTime).tz('Europe/Oslo').locale('nb').day();
-
-        if(rows.length !== 0 && lastDay !== day) {
-            microApp.sections.push({
-                header: getDay(lastDay),
-                rows: rows
-            });
-            rows = [];
-        }
-        rows.push({
-            type: "rich-text",
-            title: appointments[i].subject,
-            content: appointments[i].bodyPreview,
-            tag: getPrettyDate(appointments[i].start.dateTime)
-        });
-
-        if(i === appointments.length - 1) {
-            microApp.sections.push({
-                header: getDay(day),
-                rows: rows
-            });
-        }
-        lastDay = moment.utc(appointments[i].start.dateTime).tz('Europe/Oslo').locale('nb').day();
-    }
-
-    if(microApp.sections.length === 0) {
-        microApp.sections.push({
-            rows: [{
-                type: "text",
-                title: "Ingen avtaler den neste uken"
-            }]
-        });
-    }
-    return microApp;*/
 }
 
 function getEnvironmentVariable(name) {

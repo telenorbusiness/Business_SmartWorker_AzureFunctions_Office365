@@ -80,32 +80,6 @@ function getStorageInfo(rowKey, context) {
   context.log("Kommer her");
 }
 
-function getDocuments(graphToken, context) {
-  var requestOptions = {
-    method: "GET",
-    resolveWithFullResponse: true,
-    json: true,
-    simple: false,
-    uri: "https://graph.microsoft.com/v1.0/me/drive/sharedWithMe",
-    headers: {
-      Authorization: "Bearer " + graphToken
-    }
-  };
-
-  return requestPromise(requestOptions).then(function(response) {
-    if (response.statusCode === 200) {
-      return response.body.value;
-    } else {
-      throw new Error(
-        "Fetching documents returned with status code: " +
-          response.statusCode +
-          " and message: " +
-          response.body.error.message
-      );
-    }
-  });
-}
-
 function getDocumentsFromSharepoint(graphToken, siteId) {
 
   var requestOptions = {

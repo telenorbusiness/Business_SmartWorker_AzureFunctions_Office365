@@ -1,22 +1,19 @@
 var Promise = require("bluebird");
-const reftokenAuth = require("../auth");
 var azure = Promise.promisifyAll(require("azure-storage"));
 
 module.exports = function(context, req) {
   Promise.try(() => {
-    context.log("Før ref token auth");
-    //return reftokenAuth(req);
     return checkAuthKey(req.headers.authorization);
   })
     .then(response => {
-        let sharepointId = req.body.sharepointId;
-        let userId = req.body.upn;
+      let sharepointId = req.body.sharepointId;
+      let userId = req.body.upn;
 
-        if (sharepointId && userId) {
-          context.log("sharepointid and userId in query");
-          return insertUserInfo(userId, sharepointId, context);
-        }
-        return null;
+      if (sharepointId && userId) {
+        context.log("sharepointid and userId in body");
+        return insertUserInfo(userId, sharepointId, context);
+      }
+      return null;
     })
     .then(result => {
       let res = {
@@ -60,20 +57,12 @@ function insertUserInfo(userId, sharepointId, context) {
 }
 
 function checkAuthKey(key) {
-  if(key === process.env["configKey"]) {
+  if (key === process.env["configKey"]) {
     return true;
-  }
-  else throw new Error("Not a valid config key");
+  } else throw new Error("Not a valid config key");
 }
 function getEnvironmentVariable(name) {
   return process.env[name];
-}
-
-class atWorkValidateError extends Error {
-  constructor(message, response) {
-    super(message);
-    this.response = response;
-  }
 }
 
 class tableStorageError extends Error {

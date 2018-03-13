@@ -47,16 +47,6 @@ module.exports = function(context, req) {
 };
 
 function getDocuments(graphToken, context, driveId, itemId) {
-  context.log(
-    "URI som blir sendt: " +
-      encodeURI(
-        "https://graph.microsoft.com/beta/drives/" +
-          driveId +
-          "/items/" +
-          itemId +
-          "/children"
-      )
-  );
   var requestOptions = {
     method: "GET",
     resolveWithFullResponse: true,
