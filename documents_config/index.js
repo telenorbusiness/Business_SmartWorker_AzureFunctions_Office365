@@ -6,11 +6,9 @@ module.exports = function(context, req) {
   Promise.try(() => {
     context.log("Før ref token auth");
     //return reftokenAuth(req);
-    return { status: 200 };
+    return checkAuthKey(req.headers.authorization);
   })
     .then(response => {
-      context.log("Response from SA: " + JSON.stringify(response));
-      if (response.status === 200) {
         let sharepointId = req.body.sharepointId;
         let userId = req.body.upn;
 
@@ -19,16 +17,13 @@ module.exports = function(context, req) {
           return insertUserInfo(userId, sharepointId, context);
         }
         return null;
-      } else {
-        throw new atWorkValidateError(response.message, response.status);
-      }
     })
-    .then(res => {
+    .then(result => {
       let res = {
         body:
-          res === null
+          result === null
             ? "Missing necessary properties in body"
-            : JSON.stringify(res)
+            : JSON.stringify(result)
       };
       return context.done(null, res);
     })
@@ -64,6 +59,12 @@ function insertUserInfo(userId, sharepointId, context) {
     });
 }
 
+function checkAuthKey(key) {
+  if(key === process.env["configKey"]) {
+    return true;
+  }
+  else throw new Error("Not a valid config key");
+}
 function getEnvironmentVariable(name) {
   return process.env[name];
 }

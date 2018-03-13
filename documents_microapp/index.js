@@ -22,11 +22,11 @@ module.exports = function(context, req) {
       } else {
         throw new atWorkValidateError(response.message, response.status);
       }
-    })/*
+    })
     .then(sharepointId => {
       context.log("Before getDocumentsFromSharepoint with id: " + sharepointId);
       return getDocumentsFromSharepoint(graphToken, sharepointId);
-    })*/
+    })
     .then(documents => {
       context.log("Before createMicroApp");
       let res = {
