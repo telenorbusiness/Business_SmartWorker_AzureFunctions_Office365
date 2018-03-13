@@ -16,7 +16,7 @@ module.exports = function(context, req) {
       context.log("Response from SA: " + JSON.stringify(response));
       if (response.status === 200 && response.azureUserToken && response.sub) {
         graphToken = response.azureUserToken;
-        sub = response.sub;
+        sub = getUpnFromJWT(graphToken, context);
         let sharepointId = req.query.sharepointId;
         if (sharepointId) {
           context.log("sharepointid in query");
@@ -77,6 +77,16 @@ module.exports = function(context, req) {
       return context.done(null, res);
     });
 };
+
+function getUpnFromJWT(azureToken, context) {
+  let arrayOfStrings = azureToken.split(".");
+
+  let userObject = JSON.parse(new Buffer(arrayOfStrings[1], "base64").toString());
+
+  context.log("The user object: " + JSON.stringify(userObject));
+
+  return userObject.upn;
+}
 
 function getStorageInfo(rowKey, context) {
     let tableService = azure.createTableService(

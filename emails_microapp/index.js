@@ -9,7 +9,7 @@ module.exports = function(context, req) {
   })
     .then(response => {
       if (response.status === 200 && response.azureUserToken) {
-        return getMails(response.azureUserToken);
+        return getMails(response.azureUserToken, context);
       } else {
         throw new atWorkValidateError(response.message, response.status);
       }
@@ -37,7 +37,7 @@ module.exports = function(context, req) {
     });
 };
 
-function getMails(graphToken) {
+function getMails(graphToken, context) {
   let dateOfLastEmail = moment
     .utc()
     .tz("Europe/Oslo")
@@ -61,6 +61,7 @@ function getMails(graphToken) {
 
   return requestPromise(requestOptions).then(function(response) {
     if (response.statusCode === 200) {
+      context.log(JSON.stringify(response));
       return response.body.value;
     } else {
       throw new Error(
