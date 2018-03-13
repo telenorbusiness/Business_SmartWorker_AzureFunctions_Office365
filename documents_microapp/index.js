@@ -97,7 +97,7 @@ function getStorageInfo(rowKey, context) {
     let tableService = azure.createTableService(
       getEnvironmentVariable("AzureWebJobsStorage")
     );
-   return tableService.retrieveEntityAsync("documents_microapp","user_sharepointsites",rowKey)
+   return tableService.retrieveEntityAsync("documents","user_sharepointsites",rowKey)
     .then((result) => {
       context.log("Response: " + JSON.stringify(result));
       return result.sharepointId._;
@@ -114,7 +114,7 @@ function insertUserInfo(userId, sharepointId, context) {
   );
   let entGen = azure.TableUtilities.entityGenerator;
 
-  return tableService.createTableIfNotExistsAsync("documents_microapp")
+  return tableService.createTableIfNotExistsAsync("documents")
     .then((response) => {
       context.log("Table created? ->" + JSON.stringify(response));
       let entity = {
@@ -122,7 +122,7 @@ function insertUserInfo(userId, sharepointId, context) {
         RowKey: entGen.String(userId),
         sharepointId: entGen.String(sharepointId)
       };
-      return tableService.insertOrReplaceEntityAsync("documents_microapp", entity);
+      return tableService.insertOrReplaceEntityAsync("documents", entity);
     })
     .then((result) => {
       context.log("Added row! -> " + JSON.stringify(result));
