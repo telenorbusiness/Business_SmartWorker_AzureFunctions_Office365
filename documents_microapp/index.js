@@ -27,18 +27,11 @@ module.exports = function(context, req) {
       } else {
         throw new atWorkValidateError(response.message, response.status);
       }
-    })
+    })/*
     .then(sharepointId => {
       context.log("Before getDocumentsFromSharepoint with id: " + sharepointId);
       return getDocumentsFromSharepoint(graphToken, sharepointId);
-    })
-    .catch(sharePointError, error => {
-      context.log(error);
-      context.log(
-        "Error fetching from sharePoint, falling back to fetch from shared documents in onedrive"
-      );
-      return getDocuments(graphToken, context);
-    })
+    })*/
     .then(documents => {
       context.log("Before createMicroApp");
       let res = {
@@ -46,7 +39,7 @@ module.exports = function(context, req) {
       };
       appCreated = true;
       return context.done(null, res);
-    })
+    })/*
     .catch(tableStorageError, error => {
       context.log("Finding userSites returned with: " + error);
       return getSites(graphToken);
@@ -59,7 +52,7 @@ module.exports = function(context, req) {
         };
         return context.done(null, res);
       }
-    })
+    })*/
     .catch(atWorkValidateError, error => {
       context.log("Logger: " + error);
       let res = {
@@ -67,6 +60,18 @@ module.exports = function(context, req) {
         body: JSON.parse(error)
       };
       return context.done(null, res);
+    })
+    .catch(sharePointError, error => {
+      context.log(error);
+      context.log(
+        "Error fetching from sharePoint, falling back to fetch from shared documents in onedrive"
+      );
+      let res = {
+        status: 200,
+        body: "Error from sharepoint"
+      };
+      return context.done(null, res);
+      //return getDocuments(graphToken, context);
     })
     .catch(error => {
       context.log(error);
@@ -92,7 +97,7 @@ function getStorageInfo(rowKey, context) {
     let tableService = azure.createTableService(
       getEnvironmentVariable("AzureWebJobsStorage")
     );
-   return tableService.retrieveEntityAsync("userSites","user_sharepointsites",rowKey)
+   return tableService.retrieveEntityAsync("documents_microapp","user_sharepointsites",rowKey)
     .then((result) => {
       context.log("Response: " + JSON.stringify(result));
       return result.sharepointId._;
@@ -109,7 +114,7 @@ function insertUserInfo(userId, sharepointId, context) {
   );
   let entGen = azure.TableUtilities.entityGenerator;
 
-  return tableService.createTableIfNotExistsAsync("userSites")
+  return tableService.createTableIfNotExistsAsync("documents_microapp")
     .then((response) => {
       context.log("Table created? ->" + JSON.stringify(response));
       let entity = {
@@ -117,7 +122,7 @@ function insertUserInfo(userId, sharepointId, context) {
         RowKey: entGen.String(userId),
         sharepointId: entGen.String(sharepointId)
       };
-      return tableService.insertOrReplaceEntityAsync("userSites", entity);
+      return tableService.insertOrReplaceEntityAsync("documents_microapp", entity);
     })
     .then((result) => {
       context.log("Added row! -> " + JSON.stringify(result));
