@@ -35,10 +35,6 @@ module.exports = function(context, req) {
       appCreated = true;
       return context.done(null, res);
     })/*
-    .catch(tableStorageError, error => {
-      context.log("Finding userSites returned with: " + error);
-      return getSites(graphToken);
-    })
     .then(sharepointSites => {
       if(!appCreated) {
         context.log("Before createSelectionMicroApp");
@@ -48,11 +44,19 @@ module.exports = function(context, req) {
         return context.done(null, res);
       }
     })*/
+    .catch(tableStorageError, error => {
+      context.log("Finding userSites returned with: " + error);
+      let res = {
+        body: createEmptyMicroApp()
+      };
+      return context.done(null, res);
+      //return getSites(graphToken);
+    })
     .catch(atWorkValidateError, error => {
       context.log("Logger: " + error);
       let res = {
         status: error.response,
-        body: JSON.parse(error)
+        body: JSON.parse(error.message)
       };
       return context.done(null, res);
     })
@@ -299,6 +303,22 @@ function createMicroApp(documents) {
   return microApp;
 }
 
+function createEmptyMicroApp() {
+  var microApp = {
+    id: "documents_empty",
+    sections: [
+      {
+        rows: [
+          {
+            type: "text",
+            title: "Det er ingen sharepoint sider knyttet til din bruker"
+          }
+        ]
+      }
+    ]
+  };
+  return microApp;
+}
 function getPrettyDate(date) {
   let time = moment
     .utc(date)
