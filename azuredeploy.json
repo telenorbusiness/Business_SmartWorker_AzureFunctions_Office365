@@ -103,7 +103,7 @@
           "value": "[parameters('authKey')]"
         }, {
           "name": "idpUrl",
-          "value": "https://smartworker-dev-azure-idp.pimdemo.no/"
+          "value": "https://idp.smartansatt.telenor.no/idp/me"
         }]
       }
     },
