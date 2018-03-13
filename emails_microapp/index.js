@@ -108,7 +108,7 @@ function createMicroApp(mails) {
       tag: getPrettyDate(mails[i].receivedDateTime),
       onClick: {
         type: "open-url",
-        url: mails[i].webLink
+        url: mails[i].webLink + "&ispopout=0"
       }
     });
   }

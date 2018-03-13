@@ -108,7 +108,7 @@ function createMicroApp(appointments) {
         tag: getPrettyTime(appointmentDate),
         onClick: {
           type: "open-url",
-          url: encodeURI(appointments[i].webLink)
+          url: appointments[i].webLink
         }
       });
     } else if (appointmentDate.isBefore(maxDate)) {
@@ -128,7 +128,7 @@ function createMicroApp(appointments) {
         numContentLines: 1,
         onClick: {
           type: "open-url",
-          url: encodeURI(appointments[i].webLink)
+          url: appointments[i].webLink
         }
       });
       lastRespondedDay = appointmentDate;
