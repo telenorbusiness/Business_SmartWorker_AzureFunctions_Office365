@@ -3,7 +3,6 @@ const reftokenAuth = require("../auth");
 var azure = Promise.promisifyAll(require("azure-storage"));
 
 module.exports = function(context, req) {
-
   Promise.try(() => {
     context.log("Før ref token auth");
     return reftokenAuth(req);
@@ -23,19 +22,23 @@ module.exports = function(context, req) {
         throw new atWorkValidateError(response.message, response.status);
       }
     })
-    .then((res) => {
+    .then(res => {
       let res = {
-        body: res === null ? 'Missing necessary properties in body' : JSON.stringify(res)
+        body:
+          res === null
+            ? "Missing necessary properties in body"
+            : JSON.stringify(res)
       };
       return context.done(null, res);
     })
-    .catch((error) => {
+    .catch(error => {
       let res = {
         status: 500,
-        body: 'An unexpected error occurred'
-      }
+        body: "An unexpected error occurred"
+      };
+      return context.done(null, res);
     });
-  }
+};
 
 function insertUserInfo(userId, sharepointId, context) {
   let tableService = azure.createTableService(
@@ -43,8 +46,9 @@ function insertUserInfo(userId, sharepointId, context) {
   );
   let entGen = azure.TableUtilities.entityGenerator;
 
-  return tableService.createTableIfNotExistsAsync("documents")
-    .then((response) => {
+  return tableService
+    .createTableIfNotExistsAsync("documents")
+    .then(response => {
       context.log("Table created? ->" + JSON.stringify(response));
       let entity = {
         PartitionKey: entGen.String("user_sharepointsites"),
@@ -53,12 +57,11 @@ function insertUserInfo(userId, sharepointId, context) {
       };
       return tableService.insertOrReplaceEntityAsync("documents", entity);
     })
-    .then((result) => {
+    .then(result => {
       context.log("Added row! -> " + JSON.stringify(result));
       return result;
     });
 }
-
 
 function getEnvironmentVariable(name) {
   return process.env[name];
