@@ -17,7 +17,7 @@ module.exports = function(context, req) {
     })
     .then(appointments => {
       let res = {
-        body: createMicroApp(appointments)
+        body: createMicroApp(appointments, context)
       };
       return context.done(null, res);
     })
@@ -77,17 +77,14 @@ function getAppointments(context, graphToken) {
     });
 }
 
-function createMicroApp(appointments) {
+function createMicroApp(appointments, context) {
   let notRespondedRows = [];
   let respondedRows = [];
   let sections = [];
   let sectionIndex = -1;
   let lastRespondedDay = "";
-  let maxDate = moment()
-    .add(14, "days")
-    .utc()
-    .tz("Europe/Oslo")
-    .locale("nb");
+  const maxNumOfAppointments = 10;
+  let numOfAppointments = 0;
   let now = moment
     .utc()
     .tz("Europe/Oslo")
@@ -111,7 +108,7 @@ function createMicroApp(appointments) {
           url: "https://outlook.office.com/owa/?path=/mail/inbox"
         }
       });
-    } else if (appointmentDate.isBefore(maxDate)) {
+    } else if (numOfAppointments <= maxNumOfAppointments) {
       if (!appointmentDate.isSame(lastRespondedDay, "day")) {
         sections.push({
           header: getPrettyDate(appointmentDate),
@@ -127,7 +124,9 @@ function createMicroApp(appointments) {
         tag: getPrettyTime(appointmentDate),
         numContentLines: 1
       });
+      context.log("numOfAppointments: " + numOfAppointments + " appointment: " + appointments[i].subject);
       lastRespondedDay = appointmentDate;
+      numOfAppointments++;
     }
   }
 
