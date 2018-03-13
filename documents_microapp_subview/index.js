@@ -50,7 +50,7 @@ function getDocuments(graphToken, context, driveId, itemId) {
   context.log(
     "URI som blir sendt: " +
       encodeURI(
-        "https://graph.microsoft.com/v1.0/drives/" +
+        "https://graph.microsoft.com/beta/drives/" +
           driveId +
           "/items/" +
           itemId +
@@ -63,7 +63,7 @@ function getDocuments(graphToken, context, driveId, itemId) {
     json: true,
     simple: false,
     uri: encodeURI(
-      "https://graph.microsoft.com/v1.0/drives/" +
+      "https://graph.microsoft.com/beta/drives/" +
         driveId +
         "/items/" +
         itemId +

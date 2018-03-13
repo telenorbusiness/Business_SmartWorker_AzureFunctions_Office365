@@ -53,7 +53,7 @@ function getAppointments(context, graphToken) {
     json: true,
     simple: true,
     uri: encodeURI(
-      "https://graph.microsoft.com/v1.0/me/calendarview?startdatetime=" +
+      "https://graph.microsoft.com/beta/me/calendarview?startdatetime=" +
         now +
         "&enddatetime=" +
         maxDate

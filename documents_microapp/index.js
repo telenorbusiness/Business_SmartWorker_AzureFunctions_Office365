@@ -7,6 +7,7 @@ var azure = Promise.promisifyAll(require("azure-storage"));
 module.exports = function(context, req) {
   let graphToken;
   let sub;
+  let appCreated = false;
   Promise.try(() => {
     context.log("Før ref token auth");
     return reftokenAuth(req);
@@ -43,6 +44,7 @@ module.exports = function(context, req) {
       let res = {
         body: createMicroApp(documents)
       };
+      appCreated = true;
       return context.done(null, res);
     })
     .catch(tableStorageError, error => {
@@ -50,11 +52,13 @@ module.exports = function(context, req) {
       return getSites(graphToken);
     })
     .then(sharepointSites => {
-      context.log("Before createSelectionMicroApp");
-      let res = {
-        body: createSelectionMicroApp(sharepointSites)
-      };
-      return context.done(null, res);
+      if(!appCreated) {
+        context.log("Before createSelectionMicroApp");
+        let res = {
+          body: createSelectionMicroApp(sharepointSites)
+        };
+        return context.done(null, res);
+      }
     })
     .catch(atWorkValidateError, error => {
       context.log("Logger: " + error);
@@ -81,7 +85,7 @@ function getStorageInfo(rowKey, context) {
    return tableService.retrieveEntityAsync("userSites","user_sharepointsites",rowKey)
     .then((result) => {
       context.log("Response: " + JSON.stringify(result));
-      return result.sharepointId;
+      return result.sharepointId._;
     })
     .catch((error) => {
       throw new tableStorageError(error);
@@ -103,7 +107,7 @@ function insertUserInfo(userId, sharepointId, context) {
         RowKey: entGen.String(userId),
         sharepointId: entGen.String(sharepointId)
       };
-      return tableService.insertEntityAsync("userSites", entity);
+      return tableService.insertOrReplaceEntityAsync("userSites", entity);
     })
     .then((result) => {
       context.log("Added row! -> " + JSON.stringify(result));
@@ -116,7 +120,7 @@ function getSites(graphToken) {
     method: "GET",
     json: true,
     simple: false,
-    uri: "https://graph.microsoft.com/v1.0/sites?search=",
+    uri: "https://graph.microsoft.com/beta/sites?search=",
     headers: {
       Authorization: "Bearer " + graphToken
     }
@@ -162,7 +166,7 @@ function getDocuments(graphToken, context) {
     resolveWithFullResponse: true,
     json: true,
     simple: false,
-    uri: "https://graph.microsoft.com/v1.0/me/drive/sharedWithMe",
+    uri: "https://graph.microsoft.com/beta/me/drive/sharedWithMe",
     headers: {
       Authorization: "Bearer " + graphToken
     }

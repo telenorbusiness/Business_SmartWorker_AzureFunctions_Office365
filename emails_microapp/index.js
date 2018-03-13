@@ -50,7 +50,7 @@ function getMails(graphToken) {
     json: true,
     simple: false,
     uri: encodeURI(
-      "https://graph.microsoft.com/v1.0/me/messages?$filter=ReceivedDateTime ge " +
+      "https://graph.microsoft.com/beta/me/messages?$filter=ReceivedDateTime ge " +
         dateOfLastEmail +
         "&$orderby=ReceivedDateTime desc"
     ),

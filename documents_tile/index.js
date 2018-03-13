@@ -89,7 +89,7 @@ function getDocumentsFromSharepoint(graphToken) {
     json: true,
     simple: true,
     uri: encodeURI(
-      "https://graph.microsoft.com/v1.0/sites/" +
+      "https://graph.microsoft.com/beta/sites/" +
         hostName +
         ":/sites/" +
         relativePathName
@@ -103,7 +103,7 @@ function getDocumentsFromSharepoint(graphToken) {
     .then(function(body) {
       let siteId = body.id;
       requestOptions.uri = encodeURI(
-        "https://graph.microsoft.com/v1.0/sites/" +
+        "https://graph.microsoft.com/beta/sites/" +
           siteId +
           "/drive/root/children"
       );

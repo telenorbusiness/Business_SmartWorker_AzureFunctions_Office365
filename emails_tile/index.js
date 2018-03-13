@@ -24,9 +24,10 @@ module.exports = function(context, req) {
       return context.done(null, res);
     })
     .catch(atWorkValidateError, error => {
+      context.log("Atwork error. response " + JSON.stringify(error.response));
       let res = {
         status: error.response,
-        body: error.message
+        body: JSON.parse(error.message)
       };
       return context.done(null, res);
     })
@@ -52,7 +53,7 @@ function getUnreadMails(graphToken, context) {
     json: true,
     simple: false,
     uri: encodeURI(
-      "https://graph.microsoft.com/v1.0/me/messages?$filter=isRead eq false and ReceivedDateTime ge " +
+      "https://graph.microsoft.com/beta/me/messages?$filter=isRead eq false and ReceivedDateTime ge " +
         dateOfLastEmail
     ),
     headers: {
