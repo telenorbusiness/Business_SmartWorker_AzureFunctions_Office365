@@ -108,7 +108,7 @@ function createMicroApp(appointments) {
         tag: getPrettyTime(appointmentDate),
         onClick: {
           type: "open-url",
-          url: appointments[i].webLink
+          url: "https://outlook.office.com/owa/?path=/mail/inbox"
         }
       });
     } else if (appointmentDate.isBefore(maxDate)) {
@@ -125,11 +125,7 @@ function createMicroApp(appointments) {
         text: appointments[i].location.displayName,
         content: appointments[i].bodyPreview,
         tag: getPrettyTime(appointmentDate),
-        numContentLines: 1,
-        onClick: {
-          type: "open-url",
-          url: appointments[i].webLink
-        }
+        numContentLines: 1
       });
       lastRespondedDay = appointmentDate;
     }
@@ -146,17 +142,18 @@ function createMicroApp(appointments) {
     id: "calendar_main",
     sections: sections
   };
-
-  if (microApp.sections.length === 0) {
-    microApp.sections.push({
-      rows: [
-        {
-          type: "text",
-          title: "Ingen avtaler å vise"
+  microApp.sections.push({
+    rows: [
+      {
+        type: "button",
+        title: "VIS KALENDER",
+        onClick: {
+          type: "open-url",
+          url: "https://outlook.office365.com/owa/?path=/calendar/view/Month"
         }
-      ]
-    });
-  }
+      }
+    ]
+  });
   return microApp;
 
   /*
