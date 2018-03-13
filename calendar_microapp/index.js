@@ -181,33 +181,6 @@ function getPrettyTime(date) {
   return time.format("H:mm");
 }
 
-function getDay(dayNumber) {
-  let today = moment
-    .utc()
-    .tz("Europe/Oslo")
-    .locale("nb")
-    .day();
-
-  switch (dayNumber) {
-    case 0:
-      return "Søndag";
-    case 1:
-      return "Mandag";
-    case 2:
-      return "Tirsdag";
-    case 3:
-      return "Onsdag";
-    case 4:
-      return "Torsdag";
-    case 5:
-      return "Fredag";
-    case 6:
-      return "Lørdag";
-    default:
-      return getPrettyDate(moment().day(dayNumber));
-  }
-}
-
 class atWorkValidateError extends Error {
   constructor(message, response) {
     super(message);
