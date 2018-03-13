@@ -2,6 +2,7 @@ var Promise = require("bluebird");
 var requestPromise = require("request-promise");
 const reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
+var azure = Promise.promisifyAll(require("azure-storage"));
 
 module.exports = function(context, req) {
   let graphToken;
@@ -11,7 +12,8 @@ module.exports = function(context, req) {
     .then(response => {
       if (response.status === 200 && response.azureUserToken) {
         graphToken = response.azureUserToken;
-        return getDocumentsFromSharepoint(response.azureToken, context);
+        let upn = getUpnFromJWT(graphToken, context);
+        return getStorageInfo(upn, context);
       } else {
         throw new atWorkValidateError(
           JSON.stringify(response.message),
@@ -19,16 +21,19 @@ module.exports = function(context, req) {
         );
       }
     })
-    .catch(sharePointError, error => {
-      context.log(error);
-      context.log(
-        "Error fetching from sharePoint, falling back to fetch from shared documents in onedrive"
-      );
-      return getDocuments(graphToken, context);
+    .then((sharepointId) => {
+      return getDocumentsFromSharepoint(graphToken, sharepointId);
     })
     .then(documents => {
       let res = {
         body: createTile(documents)
+      };
+      return context.done(null, res);
+    })
+    .catch(tableStorageError, error => {
+      context.log("User not in storage, creating generic tile");
+      let res = {
+        body: createGenericTile()
       };
       return context.done(null, res);
     })
@@ -49,6 +54,31 @@ module.exports = function(context, req) {
       return context.done(null, res);
     });
 };
+
+function getUpnFromJWT(azureToken, context) {
+  let arrayOfStrings = azureToken.split(".");
+
+  let userObject = JSON.parse(new Buffer(arrayOfStrings[1], "base64").toString());
+
+  context.log("The user object: " + JSON.stringify(userObject));
+
+  return userObject.upn;
+}
+
+function getStorageInfo(rowKey, context) {
+    let tableService = azure.createTableService(
+      getEnvironmentVariable("AzureWebJobsStorage")
+    );
+   return tableService.retrieveEntityAsync("documents","user_sharepointsites",rowKey)
+    .then((result) => {
+      context.log("Response: " + JSON.stringify(result));
+      return result.sharepointId._;
+    })
+    .catch((error) => {
+      throw new tableStorageError(error);
+    });
+  context.log("Kommer her");
+}
 
 function getDocuments(graphToken, context) {
   var requestOptions = {
@@ -76,44 +106,25 @@ function getDocuments(graphToken, context) {
   });
 }
 
-function getDocumentsFromSharepoint(graphToken) {
-  let hostName = getEnvironmentVariable("sharepointHostName");
-  let relativePathName = getEnvironmentVariable("sharepointRelativePathName");
-
-  if (!hostName || !relativePathName) {
-    throw new sharePointError("Sharepoint env vars not set");
-  }
+function getDocumentsFromSharepoint(graphToken, siteId) {
 
   var requestOptions = {
     method: "GET",
     json: true,
     simple: true,
     uri: encodeURI(
-      "https://graph.microsoft.com/beta/sites/" +
-        hostName +
-        ":/sites/" +
-        relativePathName
-    ),
+        "https://graph.microsoft.com/beta/sites/" +
+          siteId +
+          "/drive/root/children"
+      ),
     headers: {
       Authorization: "Bearer " + graphToken
     }
   };
 
   return requestPromise(requestOptions)
-    .then(function(body) {
-      let siteId = body.id;
-      requestOptions.uri = encodeURI(
-        "https://graph.microsoft.com/beta/sites/" +
-          siteId +
-          "/drive/root/children"
-      );
-      return requestPromise(requestOptions);
-    })
     .then(function(response) {
       return response.value;
-    })
-    .catch(function(error) {
-      throw new sharePointError(error);
     });
 }
 
@@ -144,12 +155,17 @@ function createTile(documents = []) {
         lastModifiedDoc = documents[i];
       }
     }
-    tile.footnote =
-      getPrettyDate(lastModifiedDoc.lastModifiedDateTime) +
-      ", " +
-      lastModifiedDoc.lastModifiedBy.user.displayName;
+    tile.footnote = "Siste endring: " + getPrettyDate(lastModifiedDoc.lastModifiedDateTime);
   }
+  return tile;
+}
 
+function createGenericTile() {
+  var tile = {
+    type: "icon",
+    iconUrl: "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/dokumenter.png",
+    footnote: "Ikke registrert"
+  };
   return tile;
 }
 
@@ -180,8 +196,9 @@ class atWorkValidateError extends Error {
   }
 }
 
-class sharePointError extends Error {
+class tableStorageError extends Error {
   constructor(message) {
     super(message);
   }
 }
+

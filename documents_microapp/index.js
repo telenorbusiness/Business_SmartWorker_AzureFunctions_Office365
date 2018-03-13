@@ -28,7 +28,7 @@ module.exports = function(context, req) {
       return getDocumentsFromSharepoint(graphToken, sharepointId);
     })
     .then(documents => {
-      context.log("Before createMicroApp");
+      context.log("Before createMicroApp with documents: " + JSON.stringify(documents));
       let res = {
         body: createMicroApp(documents)
       };
@@ -212,7 +212,7 @@ function getDocumentsFromSharepoint(graphToken, sharepointId) {
     json: true,
     simple: true,
     uri: encodeURI(
-      "https://graph.microsoft.com/v1.0/sites/" +
+      "https://graph.microsoft.com/beta/sites/" +
         sharepointId +
         "/drive/root/children"
     ),
