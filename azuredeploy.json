@@ -25,6 +25,12 @@
       "metadata": {
         "description": "The auth key from Smart Ansatt"
       }
+    },
+    "configKey": {
+      "type": "string",
+      "metadata": {
+        "description": "Key of your choosing to configure documents table storage"
+      }
     }
   },
   "variables": {
@@ -103,7 +109,10 @@
           "value": "[parameters('authKey')]"
         }, {
           "name": "idpUrl",
-          "value": "https://idp.smartansatt.telenor.no/idp/me"
+          "value": "https://idp.smartansatt.telenor.no/idp/.well-known/openid-configuration"
+        }, {
+          "name": "configKey",
+          "value": "[parameters('configKey')]"
         }]
       }
     },

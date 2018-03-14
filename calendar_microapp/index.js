@@ -1,161 +1,189 @@
-var Promise = require('bluebird');
-var requestPromise = require('request-promise');
-var reftokenAuth = require('../auth');
-var moment = require('moment-timezone');
+var Promise = require("bluebird");
+var requestPromise = require("request-promise");
+var reftokenAuth = require("../auth");
+var moment = require("moment-timezone");
 
-module.exports = function (context, req) {
-
-    Promise
-        .try(() =>  {
-           return reftokenAuth(req);
-        })
-        .then((response) => {
-            if(response.status === 200 && response.azureUserToken) {
-                return getAppointments(context, response.azureUserToken);
-            }
-            else {
-                context.log("AtWork responded with: " + JSON.stringify(response));
-                throw new atWorkValidateError(response.message, response.status);
-            }
-        })
-        .then((appointments) => {
-            let res = {
-                body: createMicroApp(appointments)
-            };
-            return context.done(null, res);
-        })
-        .catch(atWorkValidateError,(error) => {
-            let res = {
-                status: error.response,
-                body: error.message
-            };
-            return context.done(null, res);
-        })
-        .catch((error) => {
-            context.log(error);
-            let res = {
-                status: 500,
-                body: 'An unexpected error occurred'
-            };
-            return context.done(null, res);
-        });
+module.exports = function(context, req) {
+  Promise.try(() => {
+    return reftokenAuth(req);
+  })
+    .then(response => {
+      if (response.status === 200 && response.azureUserToken) {
+        return getAppointments(context, response.azureUserToken);
+      } else {
+        context.log("AtWork responded with: " + JSON.stringify(response));
+        throw new atWorkValidateError(response.message, response.status);
+      }
+    })
+    .then(appointments => {
+      let res = {
+        body: createMicroApp(appointments, context)
+      };
+      return context.done(null, res);
+    })
+    .catch(atWorkValidateError, error => {
+      let res = {
+        status: error.response,
+        body: error.message
+      };
+      return context.done(null, res);
+    })
+    .catch(error => {
+      context.log(error);
+      let res = {
+        status: 500,
+        body: "An unexpected error occurred"
+      };
+      return context.done(null, res);
+    });
 };
 
 function getAppointments(context, graphToken) {
-    var requestOptions = {
-        method: 'GET',
-        resolveWithFullResponse: true,
-        json: true,
-        simple: true,
-        uri: encodeURI('https://graph.microsoft.com/beta/me/calendarview?startdatetime=' + moment().startOf('day').utc().format()
-        + '&enddatetime=' + moment().add(7, 'days').utc().format()),
-        headers: {
-            'Authorization': 'Bearer ' + graphToken
-        }
-    };
+  const now = moment()
+    .tz("Europe/Oslo")
+    .utc()
+    .format("YYYY-MM-DD");
+  const maxDate = moment()
+    .utc()
+    .add(6, "months")
+    .format("YYYY-MM-DD");
+  var requestOptions = {
+    method: "GET",
+    resolveWithFullResponse: true,
+    json: true,
+    simple: true,
+    uri: encodeURI(
+      "https://graph.microsoft.com/beta/me/calendarview?startdatetime=" +
+        now +
+        "&enddatetime=" +
+        maxDate
+    ),
+    headers: {
+      Authorization: "Bearer " + graphToken
+    }
+  };
 
-    return requestPromise(requestOptions)
-        .then((response) => {
-             context.log("response: " + JSON.stringify(response.body));
-            if(response.statusCode === 200 ) {
-                return response.body.value;
-            }
-            return [];
-        })
-        .catch((error) => {
-            context.log(error.statusCode + " status fra Graph API");
-            throw new Error('Graph API feil');
-        })
+  return requestPromise(requestOptions)
+    .then(response => {
+      context.log("response: " + JSON.stringify(response.body));
+      if (response.statusCode === 200) {
+        return response.body.value;
+      }
+      return [];
+    })
+    .catch(error => {
+      context.log(error.statusCode + " status fra Graph API");
+      throw new Error("Graph API feil");
+    });
 }
 
-function createMicroApp(appointments) {
-    let rows = [];
+function createMicroApp(appointments, context) {
+  let notRespondedRows = [];
+  let respondedRows = [];
+  let sections = [];
+  let sectionIndex = -1;
+  let lastRespondedDay = "";
+  const maxNumOfAppointments = 10;
+  let numOfAppointments = 0;
+  let now = moment
+    .utc()
+    .tz("Europe/Oslo")
+    .locale("nb");
 
-    let microApp = {
-        id: "calendar_main",
-        sections: []
-    };
-    if(appointments[0]) {
-     var lastDay = moment.utc(appointments[0].start.dateTime).tz('Europe/Oslo').locale('nb').day();
-    }
-    for(let i = 0; i < appointments.length; i++) {
-        let day = moment.utc(appointments[i].start.dateTime).tz('Europe/Oslo').locale('nb').day();
-
-        if(rows.length !== 0 && lastDay !== day) {
-            microApp.sections.push({
-                header: getDay(lastDay),
-                rows: rows
-            });
-            rows = [];
+  for (let i = 0; i < appointments.length; i++) {
+    let appointmentDate = moment
+      .utc(appointments[i].start.dateTime)
+      .tz("Europe/Oslo")
+      .locale("nb");
+    if (appointmentDate.isBefore(now)) {
+      continue;
+    } else if (appointments[i].responseStatus.response === "notResponded") {
+      notRespondedRows.push({
+        type: "rich-text",
+        title: appointments[i].subject,
+        text: getPrettyDate(appointmentDate),
+        tag: getPrettyTime(appointmentDate),
+        onClick: {
+          type: "open-url",
+          url: "https://outlook.office.com/owa/?path=/mail/inbox"
         }
-        rows.push({
-            type: "rich-text",
-            title: appointments[i].subject,
-            content: appointments[i].bodyPreview,
-            tag: getPrettyDate(appointments[i].start.dateTime)
+      });
+    } else if (numOfAppointments <= maxNumOfAppointments) {
+      if (!appointmentDate.isSame(lastRespondedDay, "day")) {
+        sections.push({
+          header: getPrettyDate(appointmentDate),
+          rows: []
         });
+        sectionIndex++;
+      }
+      sections[sectionIndex].rows.push({
+        type: "rich-text",
+        title: appointments[i].subject,
+        text: appointments[i].location.displayName,
+        content: appointments[i].bodyPreview,
+        tag: getPrettyTime(appointmentDate),
+        numContentLines: 1
+      });
+      context.log("numOfAppointments: " + numOfAppointments + " appointment: " + appointments[i].subject);
+      lastRespondedDay = appointmentDate;
+      numOfAppointments++;
+    }
+  }
 
-        if(i === appointments.length - 1) {
-            microApp.sections.push({
-                header: getDay(day),
-                rows: rows
-            });
+  if (notRespondedRows.length !== 0) {
+    sections.unshift({
+      header: "Invitasjoner",
+      rows: notRespondedRows
+    });
+  }
+
+  let microApp = {
+    id: "calendar_main",
+    sections: sections
+  };
+  microApp.sections.push({
+    rows: [
+      {
+        type: "button",
+        title: "VIS KALENDER",
+        onClick: {
+          type: "open-url",
+          url: "https://outlook.office365.com/owa/?path=/calendar/view/Month"
         }
-        lastDay = moment.utc(appointments[i].start.dateTime).tz('Europe/Oslo').locale('nb').day();
-    }
-
-    if(microApp.sections.length === 0) {
-        microApp.sections.push({
-            rows: [{
-                type: "text",
-                title: "Ingen avtaler den neste uken"
-            }]
-        });
-    }
-    return microApp;
+      }
+    ]
+  });
+  return microApp;
 }
 
-function getEnvironmentVariable(name)
-{
-    return process.env[name];
+function getEnvironmentVariable(name) {
+  return process.env[name];
 }
 
-function getPrettyDate(callDateTime) {
-    let time = moment.utc(callDateTime).tz('Europe/Oslo').locale('nb');
-    if (time.isSame(new Date(), "day")) {
-        return time.format('LT');
-    }
-    else {
-        return time.format('LT');
-    }
+function getPrettyDate(date) {
+  let time = moment
+    .utc(date)
+    .tz("Europe/Oslo")
+    .locale("nb");
+  if (time.isSame(new Date(), "day")) {
+    return "Idag";
+  } else {
+    return time.format("dddd Do MMM");
+  }
 }
 
-function getDay(dayNumber) {
-    let today = moment.utc().tz('Europe/Oslo').locale('nb').day();
+function getPrettyTime(date) {
+  let time = moment
+    .utc(date)
+    .tz("Europe/Oslo")
+    .locale("nb");
 
-    switch(dayNumber) {
-        case 0:
-            return "Søndag";
-        case 1:
-            return "Mandag";
-        case 2:
-            return "Tirsdag";
-        case 3:
-            return "Onsdag";
-        case 4:
-            return "Torsdag";
-        case 5:
-            return "Fredag";
-        case 6:
-            return "Lørdag";
-        default:
-            return getPrettyDate(moment().day(dayNumber));
-    }
+  return time.format("H:mm");
 }
 
 class atWorkValidateError extends Error {
-    constructor(message, response) {
-        super(message);
-        this.response = response;
-    }
+  constructor(message, response) {
+    super(message);
+    this.response = response;
+  }
 }

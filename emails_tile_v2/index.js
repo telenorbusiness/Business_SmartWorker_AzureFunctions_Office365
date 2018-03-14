@@ -84,11 +84,8 @@ function createTile(unreadMails) {
     "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/outlook.png";
   tile.notifications = 0;
   tile.onClick = {
-    type: "micro-app",
-    apiUrl:
-      "https://" +
-      getEnvironmentVariable("appName") +
-      ".azurewebsites.net/api/emails_microapp"
+    type: "open-url",
+    url: "https://outlook.office.com/owa/?path=/mail/inbox"
   };
 
   for (let i = 0; i < unreadMails.length; i++) {
@@ -102,7 +99,6 @@ function createTile(unreadMails) {
   } else {
     tile.footnote = "Du har " + tile.notifications + " uleste e-post";
   }
-
   return tile;
 }
 
