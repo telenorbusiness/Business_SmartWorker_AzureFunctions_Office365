@@ -16,7 +16,7 @@ let authenticateReferenceToken = function(req, context) {
           {
             client_id: process.env["clientId_new"],
             client_secret: process.env["clientSecret_new"],
-            userinfo_signed_response_alg: "RS256",
+            userinfo_signed_response_alg: "HS256",
             userinfo_encrypted_response_alg: "RSA1_5",
             userinfo_encrypted_response_enc: "A128CBC-HS256",
             redirect_uris: []
