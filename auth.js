@@ -4,30 +4,31 @@ const jose = require("node-jose");
 const lodash = require("lodash");
 
 Issuer.defaultHttpOptions = { timeout: 25000, retries: 2 };
-const promiseReferenceTokenClient = Issuer.discover(process.env["idpUrl"])
-  .then(issuer => {
-    let keyString = new Buffer(process.env["authKey"], "base64").toString();
-    return jose.JWK.asKey(keyString, "json").then(key => {
-      let client = new issuer.Client(
-        {
-          client_id: process.env["clientId_new"],
-          client_secret: process.env["clientSecret_new"],
-          userinfo_signed_response_alg: "RS256",
-          userinfo_encrypted_response_alg: "RSA1_5",
-          userinfo_encrypted_response_enc: "A128CBC-HS256",
-          redirect_uris: []
-        },
-        key.keystore
-      );
-      client.CLOCK_TOLERANCE = 300;
-      return client;
-    });
-  })
-  .catch(error => {
-    throw error;
-  });
+let promiseReferenceTokenClient = null;
 
 let authenticateReferenceToken = function(req, context) {
+  if(promiseReferenceTokenClient === null) {
+    promiseReferenceTokenClient = Issuer.discover(process.env["idpUrl"])
+    .then(issuer => {
+      let keyString = new Buffer(process.env["authKey"], "base64").toString();
+      return jose.JWK.asKey(keyString, "json").then(key => {
+        let client = new issuer.Client(
+          {
+            client_id: process.env["clientId_new"],
+            client_secret: process.env["clientSecret_new"],
+            userinfo_signed_response_alg: "RS256",
+            userinfo_encrypted_response_alg: "RSA1_5",
+            userinfo_encrypted_response_enc: "A128CBC-HS256",
+            redirect_uris: []
+          },
+          key.keystore
+        );
+        client.CLOCK_TOLERANCE = 300;
+        return client;
+      });
+    })
+  }
+
   return promiseReferenceTokenClient.then(client => {
     if (
       lodash.trim(
