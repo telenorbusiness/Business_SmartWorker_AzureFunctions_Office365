@@ -3,7 +3,7 @@ const Issuer = require("openid-client").Issuer;
 const jose = require("node-jose");
 const lodash = require("lodash");
 
-Issuer.defaultHttpOptions = { timeout: 25000, retries: 2 };
+Issuer.defaultHttpOptions = { timeout: 25000, retries: 2, followRedirect: true };
 let promiseReferenceTokenClient = null;
 
 let authenticateReferenceToken = function(req, context) {

@@ -53,7 +53,7 @@ function getUnreadMails(graphToken, context) {
     json: true,
     simple: false,
     uri: encodeURI(
-      "https://graph.microsoft.com/beta/me/messages?$filter=isRead eq false and ReceivedDateTime ge " +
+      "https://graph.microsoft.com/beta/me/messages/$count?$filter=isRead eq false and ReceivedDateTime ge " +
         dateOfLastEmail
     ),
     headers: {
@@ -63,7 +63,7 @@ function getUnreadMails(graphToken, context) {
 
   return requestPromise(requestOptions).then(function(response) {
     if (response.statusCode === 200) {
-      return response.body.value;
+      return response.body;
     } else {
       context.log(
         "Fetching mails returned with status code: " + response.statusCode
@@ -82,7 +82,7 @@ function createTile(unreadMails) {
   tile.type = "icon";
   tile.iconUrl =
     "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/outlook.png";
-  tile.notifications = 0;
+  tile.notifications = unreadMails;
   tile.onClick = {
     type: "micro-app",
     apiUrl:
@@ -90,10 +90,6 @@ function createTile(unreadMails) {
       getEnvironmentVariable("appName") +
       ".azurewebsites.net/api/emails_microapp"
   };
-
-  for (let i = 0; i < unreadMails.length; i++) {
-    tile.notifications++;
-  }
 
   if (tile.notifications === 0) {
     tile.footnote = "Du har ingen uleste e-post";
