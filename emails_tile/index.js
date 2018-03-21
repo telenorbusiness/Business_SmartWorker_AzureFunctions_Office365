@@ -81,7 +81,7 @@ function createTile(unreadMails) {
   let tile = {};
   tile.type = "icon";
   tile.iconUrl =
-    "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/outlook.png";
+    "https://api.smartansatt.telenor.no/cdn/office365/outlook.png";
   tile.notifications = unreadMails;
   tile.onClick = {
     type: "micro-app",

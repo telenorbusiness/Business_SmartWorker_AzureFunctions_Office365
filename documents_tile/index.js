@@ -60,8 +60,6 @@ function getUpnFromJWT(azureToken, context) {
 
   let userObject = JSON.parse(new Buffer(arrayOfStrings[1], "base64").toString());
 
-  context.log("The user object: " + JSON.stringify(userObject));
-
   return userObject.upn;
 }
 
@@ -71,13 +69,11 @@ function getStorageInfo(rowKey, context) {
     );
    return tableService.retrieveEntityAsync("documents","user_sharepointsites",rowKey)
     .then((result) => {
-      context.log("Response: " + JSON.stringify(result));
       return result.sharepointId._;
     })
     .catch((error) => {
       throw new tableStorageError(error);
     });
-  context.log("Kommer her");
 }
 
 function getDocumentsFromSharepoint(graphToken, siteId) {
@@ -137,7 +133,7 @@ function createTile(documents = []) {
 function createGenericTile() {
   var tile = {
     type: "icon",
-    iconUrl: "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/dokumenter.png",
+    iconUrl: "https://api.smartansatt.telenor.no/cdn/office365/dokumenter.png",
     footnote: "Ikke registrert"
   };
   return tile;

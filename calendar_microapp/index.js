@@ -124,7 +124,6 @@ function createMicroApp(appointments, context) {
         tag: getPrettyTime(appointmentDate),
         numContentLines: 1
       });
-      context.log("numOfAppointments: " + numOfAppointments + " appointment: " + appointments[i].subject);
       lastRespondedDay = appointmentDate;
       numOfAppointments++;
     }

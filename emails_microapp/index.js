@@ -95,8 +95,8 @@ function createMicroApp(mails) {
     microApp.sections[0].rows.push({
       type: "rich-text",
       thumbnailUrl: mails[i].isRead
-        ? "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/lestmail.png"
-        : "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/ulestmail.png",
+        ? "https://api.smartansatt.telenor.no/cdn/office365/lestmail.png"
+        : "https://api.smartansatt.telenor.no/cdn/office365/ulestmail.png",
       title:
         mails[i].from.emailAddress.name !== ""
           ? mails[i].from.emailAddress.name
