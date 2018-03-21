@@ -3,6 +3,7 @@ var requestPromise = require("request-promise");
 const reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
 var azure = Promise.promisifyAll(require("azure-storage"));
+var tableService = azure.createTableService(getEnvironmentVariable("AzureWebJobsStorage"));
 
 module.exports = function(context, req) {
   let graphToken;
@@ -64,9 +65,6 @@ function getUpnFromJWT(azureToken, context) {
 }
 
 function getStorageInfo(rowKey, context) {
-    let tableService = azure.createTableService(
-      getEnvironmentVariable("AzureWebJobsStorage")
-    );
    return tableService.retrieveEntityAsync("documents","user_sharepointsites",rowKey)
     .then((result) => {
       return result.sharepointId._;

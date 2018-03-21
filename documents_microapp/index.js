@@ -3,17 +3,16 @@ var requestPromise = require("request-promise");
 const reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
 var azure = Promise.promisifyAll(require("azure-storage"));
+var tableService = azure.createTableService(getEnvironmentVariable("AzureWebJobsStorage"));
 
 module.exports = function(context, req) {
   let graphToken;
   let sub;
   let appCreated = false;
   Promise.try(() => {
-    context.log("Før ref token auth");
     return reftokenAuth(req);
   })
     .then(response => {
-      context.log("Response from SA: " + JSON.stringify(response));
       if (response.status === 200 && response.azureUserToken) {
         graphToken = response.azureUserToken;
         sub = getUpnFromJWT(graphToken, context);
@@ -23,13 +22,9 @@ module.exports = function(context, req) {
       }
     })
     .then(sharepointId => {
-      context.log("Before getDocumentsFromSharepoint with id: " + sharepointId);
       return getDocumentsFromSharepoint(graphToken, sharepointId);
     })
     .then(documents => {
-      context.log(
-        "Before createMicroApp with documents: " + JSON.stringify(documents)
-      );
       let res = {
         body: createMicroApp(documents)
       };
@@ -83,9 +78,6 @@ function getUpnFromJWT(azureToken, context) {
 }
 
 function getStorageInfo(rowKey, context) {
-  let tableService = azure.createTableService(
-    getEnvironmentVariable("AzureWebJobsStorage")
-  );
   return tableService
     .retrieveEntityAsync("documents", "user_sharepointsites", rowKey)
     .then(result => {
