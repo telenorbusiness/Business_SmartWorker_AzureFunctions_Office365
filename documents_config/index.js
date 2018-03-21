@@ -10,7 +10,6 @@ module.exports = function(context, req) {
       let userId = req.body.upn;
 
       if (sharepointId && userId) {
-        context.log("sharepointid and userId in body");
         return insertUserInfo(userId, sharepointId, context);
       }
       return null;
@@ -45,7 +44,7 @@ function insertUserInfo(userId, sharepointId, context) {
       context.log("Table created? ->" + JSON.stringify(response));
       let entity = {
         PartitionKey: entGen.String("user_sharepointsites"),
-        RowKey: entGen.String(userId),
+        RowKey: entGen.String(userId.toLowerCase()),
         sharepointId: entGen.String(sharepointId)
       };
       return tableService.insertOrReplaceEntityAsync("documents", entity);

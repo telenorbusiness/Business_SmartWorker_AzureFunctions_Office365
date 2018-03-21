@@ -60,7 +60,7 @@ function getUpnFromJWT(azureToken, context) {
 
   let userObject = JSON.parse(new Buffer(arrayOfStrings[1], "base64").toString());
 
-  return userObject.upn;
+  return userObject.upn.toLowerCase();
 }
 
 function getStorageInfo(rowKey, context) {
