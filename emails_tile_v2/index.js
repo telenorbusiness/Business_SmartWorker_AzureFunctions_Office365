@@ -49,28 +49,36 @@ function getUnreadMails(graphToken, context) {
     .format("YYYY-MM-DD");
   var requestOptions = {
     method: "GET",
-    resolveWithFullResponse: true,
     json: true,
-    simple: false,
     uri: encodeURI(
-      "https://graph.microsoft.com/beta/me/messages?$filter=isRead eq false and ReceivedDateTime ge " +
-        dateOfLastEmail
+      "https://graph.microsoft.com/beta/me/mailFolders?$filter=displayName eq 'Inbox'"
     ),
     headers: {
       Authorization: "Bearer " + graphToken
     }
   };
 
-  return requestPromise(requestOptions).then(function(response) {
-    if (response.statusCode === 200) {
-      return response.body.value;
-    } else {
+  return requestPromise(requestOptions)
+    .then(function(response) {
+      let inboxId = response.value[0].id;
+      requestOptions.json = false;
+      requestOptions.uri = encodeURI(
+        "https://graph.microsoft.com/beta/me/mailFolders/" +
+          id +
+          "/messages/$count?$filter=isRead eq false and ReceivedDateTime ge " +
+          dateOfLastEmail
+      );
+      return requestPromise(requestOptions);
+    })
+    .then(response => {
+      return response.body;
+    })
+    .catch(error => {
       context.log(
-        "Fetching mails returned with status code: " + response.statusCode
+        "Fetching mails returned with status code: " + error.statusCode
       );
       return null;
-    }
-  });
+    });
 }
 
 function createTile(unreadMails) {
@@ -80,17 +88,12 @@ function createTile(unreadMails) {
 
   let tile = {};
   tile.type = "icon";
-  tile.iconUrl =
-    "https://api.smartansatt.telenor.no/cdn/office365/outlook.png";
-  tile.notifications = 0;
+  tile.iconUrl = "https://api.smartansatt.telenor.no/cdn/office365/outlook.png";
+  tile.notifications = parseInt(unreadMails);
   tile.onClick = {
     type: "open-url",
     url: "https://outlook.office.com/owa/?path=/mail/inbox"
   };
-
-  for (let i = 0; i < unreadMails.length; i++) {
-    tile.notifications++;
-  }
 
   if (tile.notifications === 0) {
     tile.footnote = "Du har ingen uleste e-post";

@@ -100,7 +100,7 @@ function createTile(documents = []) {
   var tile = {
     type: "icon",
     iconUrl:
-      "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/dokumenter.png",
+      "https://api.smartansatt.telenor.no/cdn/office365/dokumenter.png",
     footnote: "Se delte dokumenter",
     onClick: {
       type: "micro-app",

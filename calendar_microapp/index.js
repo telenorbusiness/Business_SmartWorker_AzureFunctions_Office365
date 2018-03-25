@@ -65,7 +65,6 @@ function getAppointments(context, graphToken) {
 
   return requestPromise(requestOptions)
     .then(response => {
-      context.log("response: " + JSON.stringify(response.body));
       if (response.statusCode === 200) {
         return response.body.value;
       }
