@@ -64,18 +64,15 @@ function getUnreadMails(graphToken, context) {
       requestOptions.json = false;
       requestOptions.uri = encodeURI(
         "https://graph.microsoft.com/beta/me/mailFolders/" +
-          id +
+          inboxId +
           "/messages/$count?$filter=isRead eq false and ReceivedDateTime ge " +
           dateOfLastEmail
       );
       return requestPromise(requestOptions);
     })
-    .then(response => {
-      return response.body;
-    })
     .catch(error => {
       context.log(
-        "Fetching mails returned with status code: " + error.statusCode
+        "Fetching mails returned with: " + error.StatusCodeError
       );
       return null;
     });
