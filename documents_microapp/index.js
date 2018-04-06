@@ -2,8 +2,8 @@ var Promise = require("bluebird");
 var requestPromise = require("request-promise");
 const reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
-var createTableService = require("azure-storage").createTableService;
-var tableService = createTableService(getEnvironmentVariable("AzureWebJobsStorage"));
+var azure = Promise.promisifyAll(require("azure-storage"));
+var tableService = azure.createTableService(getEnvironmentVariable("AzureWebJobsStorage"));
 
 module.exports = function(context, req) {
   let graphToken;
@@ -78,9 +78,8 @@ function getUpnFromJWT(azureToken, context) {
 }
 
 function getStorageInfo(rowKey, context) {
-  var retrieveEntity = Promise.promisify(tableService.retrieveEntity);
- // return tableService
-    return retrieveEntity("documents", "user_sharepointsites", rowKey)
+  return tableService
+    .retrieveEntityAsync("documents", "user_sharepointsites", rowKey)
     .then(result => {
       return result.sharepointId._;
     })
