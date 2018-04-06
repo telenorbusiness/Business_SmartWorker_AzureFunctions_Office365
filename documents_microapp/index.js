@@ -3,17 +3,16 @@ var requestPromise = require("request-promise");
 const reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
 var azure = Promise.promisifyAll(require("azure-storage"));
+var tableService = azure.createTableService(getEnvironmentVariable("AzureWebJobsStorage"));
 
 module.exports = function(context, req) {
   let graphToken;
   let sub;
   let appCreated = false;
   Promise.try(() => {
-    context.log("Før ref token auth");
     return reftokenAuth(req);
   })
     .then(response => {
-      context.log("Response from SA: " + JSON.stringify(response));
       if (response.status === 200 && response.azureUserToken) {
         graphToken = response.azureUserToken;
         sub = getUpnFromJWT(graphToken, context);
@@ -23,13 +22,9 @@ module.exports = function(context, req) {
       }
     })
     .then(sharepointId => {
-      context.log("Before getDocumentsFromSharepoint with id: " + sharepointId);
       return getDocumentsFromSharepoint(graphToken, sharepointId);
     })
     .then(documents => {
-      context.log(
-        "Before createMicroApp with documents: " + JSON.stringify(documents)
-      );
       let res = {
         body: createMicroApp(documents)
       };
@@ -79,13 +74,10 @@ function getUpnFromJWT(azureToken, context) {
     new Buffer(arrayOfStrings[1], "base64").toString()
   );
 
-  return userObject.upn;
+  return userObject.upn.toLowerCase();
 }
 
 function getStorageInfo(rowKey, context) {
-  let tableService = azure.createTableService(
-    getEnvironmentVariable("AzureWebJobsStorage")
-  );
   return tableService
     .retrieveEntityAsync("documents", "user_sharepointsites", rowKey)
     .then(result => {
@@ -146,7 +138,7 @@ function createMicroApp(documents) {
         title: documents.value[i].name,
         tag: getPrettyDate(documents.value[i].lastModifiedDateTime),
         thumbnailUrl:
-          "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/files.png",
+          "https://api.smartansatt.telenor.no/cdn/office365/files.png",
         onClick: {
           type: "open-url",
           url: documents.value[i].webUrl
@@ -173,7 +165,7 @@ function createMicroApp(documents) {
         title: documents.value[i].name,
         tag: getPrettyDate(documents.value[i].lastModifiedDateTime),
         thumbnailUrl:
-          "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/folder.png",
+          "https://api.smartansatt.telenor.no/cdn/office365/folder.png",
         onClick: {
           type: "call-api",
           url:

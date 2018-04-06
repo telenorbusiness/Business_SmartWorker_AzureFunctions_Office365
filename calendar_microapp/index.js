@@ -65,7 +65,6 @@ function getAppointments(context, graphToken) {
 
   return requestPromise(requestOptions)
     .then(response => {
-      context.log("response: " + JSON.stringify(response.body));
       if (response.statusCode === 200) {
         return response.body.value;
       }
@@ -124,7 +123,6 @@ function createMicroApp(appointments, context) {
         tag: getPrettyTime(appointmentDate),
         numContentLines: 1
       });
-      context.log("numOfAppointments: " + numOfAppointments + " appointment: " + appointments[i].subject);
       lastRespondedDay = appointmentDate;
       numOfAppointments++;
     }

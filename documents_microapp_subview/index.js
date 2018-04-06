@@ -89,7 +89,7 @@ function createMicroApp(documents, folderName, depth) {
         title: documents.value[i].name,
         tag: getPrettyDate(documents.value[i].lastModifiedDateTime),
         thumbnailUrl:
-          "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/files.png",
+          "https://api.smartansatt.telenor.no/cdn/office365/files.png",
         onClick: {
           type: "open-url",
           url: documents.value[i].webUrl
@@ -116,7 +116,7 @@ function createMicroApp(documents, folderName, depth) {
         title: documents.value[i].name,
         tag: getPrettyDate(documents.value[i].lastModifiedDateTime),
         thumbnailUrl:
-          "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/folder.png",
+          "https://api.smartansatt.telenor.no/cdn/office365/folder.png",
         onClick: {
           type: "call-api",
           url:

@@ -3,6 +3,7 @@ var requestPromise = require("request-promise");
 const reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
 var azure = Promise.promisifyAll(require("azure-storage"));
+var tableService = azure.createTableService(getEnvironmentVariable("AzureWebJobsStorage"));
 
 module.exports = function(context, req) {
   let graphToken;
@@ -60,24 +61,17 @@ function getUpnFromJWT(azureToken, context) {
 
   let userObject = JSON.parse(new Buffer(arrayOfStrings[1], "base64").toString());
 
-  context.log("The user object: " + JSON.stringify(userObject));
-
-  return userObject.upn;
+  return userObject.upn.toLowerCase();
 }
 
 function getStorageInfo(rowKey, context) {
-    let tableService = azure.createTableService(
-      getEnvironmentVariable("AzureWebJobsStorage")
-    );
    return tableService.retrieveEntityAsync("documents","user_sharepointsites",rowKey)
     .then((result) => {
-      context.log("Response: " + JSON.stringify(result));
       return result.sharepointId._;
     })
     .catch((error) => {
       throw new tableStorageError(error);
     });
-  context.log("Kommer her");
 }
 
 function getDocumentsFromSharepoint(graphToken, siteId) {
@@ -106,7 +100,7 @@ function createTile(documents = []) {
   var tile = {
     type: "icon",
     iconUrl:
-      "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/dokumenter.png",
+      "https://api.smartansatt.telenor.no/cdn/office365/dokumenter.png",
     footnote: "Se delte dokumenter",
     onClick: {
       type: "micro-app",
@@ -137,7 +131,7 @@ function createTile(documents = []) {
 function createGenericTile() {
   var tile = {
     type: "icon",
-    iconUrl: "https://smartworker-dev-azure-api.pimdemo.no/microapps/random-static-files/icons/dokumenter.png",
+    iconUrl: "https://api.smartansatt.telenor.no/cdn/office365/dokumenter.png",
     footnote: "Ikke registrert"
   };
   return tile;
