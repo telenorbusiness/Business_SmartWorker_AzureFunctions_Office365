@@ -85,7 +85,7 @@ function getStorageInfo(rowKey, context) {
       }
       else {
         context.log(err);
-        throw new tableStorageError(err);
+        reject(new tableStorageError(err));
       }
     });
   });
