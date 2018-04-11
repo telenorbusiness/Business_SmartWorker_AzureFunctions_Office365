@@ -65,11 +65,9 @@ function getUpnFromJWT(azureToken, context) {
 }
 
 function getStorageInfo(rowKey, context) {
-  context.log("In getStorageInfo");
   return new Promise((resolve, reject) => {
     tableService.retrieveEntity("documents", "user_sharepointsites", rowKey, (err, result, response) => {
       if(!err) {
-        context.log("Success");
         resolve(result.sharepointId._);
       }
       else {
