@@ -113,6 +113,9 @@
         }, {
           "name": "configKey",
           "value": "[parameters('configKey')]"
+        }, {
+          "name": "SCM_USE_FUNCPACK",
+          "value": "1"
         }]
       }
     },
