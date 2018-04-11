@@ -9,4 +9,5 @@ __URL TO DEPLOY TEMPLATE__
 
 __Changelog__
 
-  11-04-2018. Added the "SCM_USE_FUNCPACK" app setting to bundle npm modules resulting in better performance.
+  11-04-2018. Added the "SCM_USE_FUNCPACK=1" app setting to bundle npm modules resulting in better performance. If you have deployed before this date you need to
+  add this setting manually in application settings(Function apps -> "yourfunctionapp" -> Application settings). Add new setting with the name SCM_USE_FUNCPACK and set the value to 1, save and then update your function app(see instructions above).
