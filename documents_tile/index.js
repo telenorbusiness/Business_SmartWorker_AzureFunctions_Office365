@@ -65,29 +65,19 @@ function getUpnFromJWT(azureToken, context) {
 }
 
 function getStorageInfo(rowKey, context) {
-
+  context.log("In getStorageInfo");
   return new Promise((resolve, reject) => {
     tableService.retrieveEntity("documents", "user_sharepointsites", rowKey, (err, result, response) => {
-      if(!error) {
+      if(!err) {
+        context.log("Success");
         resolve(result.sharepointId._);
       }
       else {
-        context.log(error);
-        throw new tableStorageError(error);
+        context.log(err);
+        throw new tableStorageError(err);
       }
     });
   });
-/*
-    var retrieveEntityAsync = Promise.promisify(tableService.retrieveEntity);
-
-   return retrieveEntityAsync("documents","user_sharepointsites",rowKey)
-    .then((result) => {
-      return result.sharepointId._;
-    })
-    .catch((error) => {
-      context.log(error);
-      throw new tableStorageError(error);
-    });*/
 }
 
 function getDocumentsFromSharepoint(graphToken, siteId) {
