@@ -1,9 +1,10 @@
+var Promise = require("bluebird");
+var requestPromise = require("request-promise");
+const reftokenAuth = require("../auth");
+var moment = require("moment-timezone");
+var azure = require("azure-storage");
+var tableService = azure.createTableService(process.env["AzureWebJobsStorage"]);
+
 module.exports = function(context, myTimer) {
-  var timeStamp = new Date().toISOString();
-
-  if (myTimer.isPastDue) {
-    // context.log("JavaScript is running late!");
-  }
-
   context.done();
 };
