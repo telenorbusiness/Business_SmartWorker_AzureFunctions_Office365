@@ -48,7 +48,7 @@ function getAppointments(context, graphToken) {
     .format("YYYY-MM-DDTHH:mm:ss");
   const maxDate = moment()
     .utc()
-    .add(6, "months")
+    .add(2, "months")
     .format("YYYY-MM-DD");
   var requestOptions = {
     method: "GET",
@@ -59,7 +59,8 @@ function getAppointments(context, graphToken) {
       "https://graph.microsoft.com/beta/me/calendarview?startdatetime=" +
         now +
         "&enddatetime=" +
-        maxDate
+        maxDate +
+        "&$select=subject,start,end,responseStatus&$orderby=start/dateTime&$top=20"
     ),
     headers: {
       Authorization: "Bearer " + graphToken

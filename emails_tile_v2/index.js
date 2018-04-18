@@ -51,7 +51,7 @@ function getUnreadMails(graphToken, context) {
     method: "GET",
     json: true,
     uri: encodeURI(
-      "https://graph.microsoft.com/beta/me/mailFolders?$filter=displayName eq 'Inbox'"
+      "https://graph.microsoft.com/beta/me/mailFolders"
     ),
     headers: {
       Authorization: "Bearer " + graphToken
@@ -60,11 +60,11 @@ function getUnreadMails(graphToken, context) {
 
   return requestPromise(requestOptions)
     .then(function(response) {
-      let inboxId = response.value[0].id;
+      let inbox = response.value.find(folder => folder.wellKnownName === 'inbox');
       requestOptions.json = false;
       requestOptions.uri = encodeURI(
         "https://graph.microsoft.com/beta/me/mailFolders/" +
-          inboxId +
+          inbox.id +
           "/messages/$count?$filter=isRead eq false and ReceivedDateTime ge " +
           dateOfLastEmail
       );

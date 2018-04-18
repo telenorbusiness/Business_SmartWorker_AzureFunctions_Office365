@@ -45,7 +45,7 @@ function getAppointments(context, graphToken) {
     .format("YYYY-MM-DD");
   const maxDate = moment()
     .utc()
-    .add(6, "months")
+    .add(2, "months")
     .format("YYYY-MM-DD");
   var requestOptions = {
     method: "GET",
@@ -56,7 +56,8 @@ function getAppointments(context, graphToken) {
       "https://graph.microsoft.com/beta/me/calendarview?startdatetime=" +
         now +
         "&enddatetime=" +
-        maxDate
+        maxDate +
+        "&$select=subject,start,end,responseStatus,bodyPreview,location&$orderby=start/dateTime&$top=20"
     ),
     headers: {
       Authorization: "Bearer " + graphToken
@@ -82,8 +83,6 @@ function createMicroApp(appointments, context) {
   let sections = [];
   let sectionIndex = -1;
   let lastRespondedDay = "";
-  const maxNumOfAppointments = 10;
-  let numOfAppointments = 0;
   let now = moment
     .utc()
     .tz("Europe/Oslo")
@@ -107,7 +106,7 @@ function createMicroApp(appointments, context) {
           url: "https://outlook.office.com/owa/?path=/mail/inbox"
         }
       });
-    } else if (numOfAppointments <= maxNumOfAppointments) {
+    } else {
       if (!appointmentDate.isSame(lastRespondedDay, "day")) {
         sections.push({
           header: getPrettyDate(appointmentDate),
@@ -124,7 +123,6 @@ function createMicroApp(appointments, context) {
         numContentLines: 1
       });
       lastRespondedDay = appointmentDate;
-      numOfAppointments++;
     }
   }
 
