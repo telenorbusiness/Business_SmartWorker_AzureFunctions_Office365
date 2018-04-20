@@ -79,26 +79,26 @@ function getUnreadMails(graphToken, context) {
 }
 
 function createTile(unreadMails) {
-  if (unreadMails === null) {
-    return { type: "text", text: "Feil", subtext: "ved henting av e-post" };
-  }
 
   let tile = {};
   tile.type = "icon";
   tile.iconUrl = "https://api.smartansatt.telenor.no/cdn/office365/outlook.png";
-  tile.notifications = parseInt(unreadMails);
+  tile.notifications = unreadMails !== null ? parseInt(unreadMails) : 0;
   tile.onClick = {
     type: "open-url",
     url: "https://outlook.office.com/owa/?path=/mail/inbox"
   };
 
-  if (tile.notifications === 0) {
+  if (unreadMails === null) {
+    tile.footnote = "Gå til innboks";
+  } else if (tile.notifications === 0) {
     tile.footnote = "Du har ingen uleste e-post";
   } else if (tile.notifications === 1) {
     tile.footnote = "Du har 1 ulest e-post";
   } else {
     tile.footnote = "Du har " + tile.notifications + " uleste e-post";
   }
+
   return tile;
 }
 
