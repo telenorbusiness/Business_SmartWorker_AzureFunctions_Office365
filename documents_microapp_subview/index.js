@@ -114,7 +114,6 @@ function createMicroApp(documents, folderName, depth) {
       folderRows.push({
         type: "rich-text",
         title: documents.value[i].name,
-        tag: getPrettyDate(documents.value[i].lastModifiedDateTime),
         thumbnailUrl:
           "https://api.smartansatt.telenor.no/cdn/office365/folder.png",
         onClick: {

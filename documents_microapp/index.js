@@ -8,7 +8,6 @@ var tableService = azure.createTableService(getEnvironmentVariable("AzureWebJobs
 module.exports = function(context, req) {
   let graphToken;
   let sub;
-  let appCreated = false;
   Promise.try(() => {
     return reftokenAuth(req);
   })
@@ -22,13 +21,13 @@ module.exports = function(context, req) {
       }
     })
     .then(sharepointId => {
-      return getDocumentsFromSharepoint(graphToken, sharepointId);
+      return {documents: getDocumentsFromSharepoint(graphToken, sharepointId), recentFiles: getRecentActivity(graphToken, sharepointId)};
     })
-    .then(documents => {
+    .props()
+    .then(({ documents, recentFiles }) => {
       let res = {
-        body: createMicroApp(documents)
+        body: createMicroApp(documents, recentFiles)
       };
-      appCreated = true;
       return context.done(null, res);
     })
     .catch(tableStorageError, error => {
@@ -91,22 +90,6 @@ function getStorageInfo(rowKey, context) {
   });
 }
 
-function getSites(graphToken) {
-  var requestOptions = {
-    method: "GET",
-    json: true,
-    simple: false,
-    uri: "https://graph.microsoft.com/beta/sites?search=",
-    headers: {
-      Authorization: "Bearer " + graphToken
-    }
-  };
-
-  return requestPromise(requestOptions).then(response => {
-    return response.value;
-  });
-}
-
 function getDocumentsFromSharepoint(graphToken, sharepointId) {
   var requestOptions = {
     method: "GET",
@@ -131,9 +114,61 @@ function getDocumentsFromSharepoint(graphToken, sharepointId) {
     });
 }
 
-function createMicroApp(documents) {
+function getRecentActivity(graphToken, sharepointId) {
+  const requestOptions = {
+    method: "GET",
+    json: true,
+    simple: true,
+    uri: encodeURI(
+      "https://graph.microsoft.com/beta/sites/" +
+      sharepointId +
+      "/drive/activities?$expand=driveItem&$top=20"),
+    headers: {
+      Authorization: "Bearer " + graphToken
+    }
+  };
+
+  return requestPromise(requestOptions)
+    .then((response) => {
+      return response;
+    })
+    .catch((error) => {
+      throw new sharePointError(error);
+    });
+}
+
+function createMicroApp(documents, activities) {
   let folderRows = [];
   let fileRows = [];
+  let activityRows = [];
+  let activitiesAdded = [];
+
+  for (let i = 0; i < activities.value.length; i++) {
+    const activity = activities.value[i];
+
+    if(activitiesAdded.includes(activity.driveItem.id)) {
+      continue;
+    }
+    else if(activitiesAdded.length === 3) {
+      break;
+    }
+    else if(activity.driveItem.file && (activity.action.edit || activity.action.create || activity.action.comment)) {
+      activityRows.push({
+        type: "rich-text",
+        title: activity.driveItem.name,
+        tag: getPrettyDate(activity.driveItem.lastModifiedDateTime),
+        thumbnailUrl:
+          "https://api.smartansatt.telenor.no/cdn/office365/files.png",
+        onClick: {
+          type: "open-url",
+          url: activity.driveItem.webUrl
+        }
+      });
+      activitiesAdded.push(activity.driveItem.id);
+    }
+
+  }
+
   for (let i = 0; i < documents.value.length; i++) {
     if (!documents.value[i].folder) {
       fileRows.push({
@@ -166,7 +201,6 @@ function createMicroApp(documents) {
       folderRows.push({
         type: "rich-text",
         title: documents.value[i].name,
-        tag: getPrettyDate(documents.value[i].lastModifiedDateTime),
         thumbnailUrl:
           "https://api.smartansatt.telenor.no/cdn/office365/folder.png",
         onClick: {
@@ -195,6 +229,12 @@ function createMicroApp(documents) {
     },
     sections: [
       {
+        header: "Nylige endringer",
+        searchableParameters: ["title"],
+        rows: activityRows
+      },
+      {
+        header: "Bibliotek",
         searchableParameters: ["title"],
         rows: folderRows.concat(fileRows)
       }
