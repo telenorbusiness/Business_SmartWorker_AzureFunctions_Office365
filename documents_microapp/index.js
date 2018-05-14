@@ -146,7 +146,7 @@ function createMicroApp(documents, activities) {
   for (let i = 0; i < activities.value.length; i++) {
     const activity = activities.value[i];
 
-    if(activitiesAdded.includes(activity.driveItem.id)) {
+    if(!activity.driveItem || activitiesAdded.includes(activity.driveItem.id)) {
       continue;
     }
     else if(activitiesAdded.length === 3) {
