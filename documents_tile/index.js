@@ -87,7 +87,7 @@ function getDocumentsFromSharepoint(graphToken, siteId) {
     uri: encodeURI(
         "https://graph.microsoft.com/beta/sites/" +
           siteId +
-          "/drive/activities?$top=20"
+          "/drive/root"
       ),
     headers: {
       Authorization: "Bearer " + graphToken
@@ -96,11 +96,11 @@ function getDocumentsFromSharepoint(graphToken, siteId) {
 
   return requestPromise(requestOptions)
     .then(function(response) {
-      return response.value;
+      return response;
     });
 }
 
-function createTile(documents = []) {
+function createTile(sharepointResponse = {}) {
   var tile = {
     type: "icon",
     iconUrl:
@@ -114,13 +114,9 @@ function createTile(documents = []) {
         ".azurewebsites.net/api/documents_microapp"
     }
   };
-  for(let i = 0; i < documents.length; i++) {
-    let activity = documents[i];
 
-    if(activity.action.edit || activity.action.create || activity.action.restore || activity.action.rename) {
-      tile.footnote = "Siste endring: " + getPrettyDate(activity.times.recordedDateTime);
-      break;
-    }
+  if(sharepointResponse.lastModifiedDateTime) {
+    tile.footnote = "Siste endring: " + getPrettyDate(sharepointResponse.lastModifiedDateTime);
   }
 
   return tile;
