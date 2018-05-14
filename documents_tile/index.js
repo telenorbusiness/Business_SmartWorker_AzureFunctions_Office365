@@ -87,7 +87,7 @@ function getDocumentsFromSharepoint(graphToken, siteId) {
     uri: encodeURI(
         "https://graph.microsoft.com/beta/sites/" +
           siteId +
-          "/drive/root/children"
+          "/drive/activities?$top=20"
       ),
     headers: {
       Authorization: "Bearer " + graphToken
@@ -114,21 +114,15 @@ function createTile(documents = []) {
         ".azurewebsites.net/api/documents_microapp"
     }
   };
+  for(let i = 0; i < documents.length; i++) {
+    let activity = documents[i];
 
-  if (documents.length > 0) {
-    var lastModifiedDoc = documents[0];
-
-    for (let i = 0; i < documents.length; i++) {
-      if (
-        moment(lastModifiedDoc.lastModifiedDateTime).isBefore(
-          moment(documents[i].lastModifiedDateTime)
-        )
-      ) {
-        lastModifiedDoc = documents[i];
-      }
+    if(activity.action.edit || activity.action.create || activity.action.restore || activity.action.rename) {
+      tile.footnote = "Siste endring: " + getPrettyDate(activity.times.recordedDateTime);
+      break;
     }
-    tile.footnote = "Siste endring: " + getPrettyDate(lastModifiedDoc.lastModifiedDateTime);
   }
+
   return tile;
 }
 
