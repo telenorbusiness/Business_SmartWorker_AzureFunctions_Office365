@@ -137,6 +137,27 @@ function getRecentActivity(graphToken, sharepointId) {
     });
 }
 
+function getActionType(action) {
+  if(action.edit) {
+    return "Redigert";
+  }
+  else if(action.create) {
+    return "Opprettet";
+  }
+  else if(action.comment) {
+    return "Ny kommentar";
+  }
+  else if(action.rename) {
+    return "Nytt navn";
+  }
+  else if(action.move) {
+    return "Flyttet";
+  }
+  else {
+    return "";
+  }
+}
+
 function createMicroApp(documents, activities) {
   let folderRows = [];
   let fileRows = [];
@@ -152,10 +173,11 @@ function createMicroApp(documents, activities) {
     else if(activitiesAdded.length === 3) {
       break;
     }
-    else if(activity.driveItem.file && (activity.action.edit || activity.action.create || activity.action.comment || activity.action.rename)) {
+    else if(activity.driveItem.file && (activity.action.edit || activity.action.create || activity.action.comment || activity.action.rename || activity.action.move)) {
       activityRows.push({
         type: "rich-text",
         title: activity.driveItem.name,
+        content: getActionType(activity.action),
         tag: getPrettyDate(activity.times.recordedDateTime),
         thumbnailUrl:
           "https://api.smartansatt.telenor.no/cdn/office365/files.png",
@@ -229,7 +251,7 @@ function createMicroApp(documents, activities) {
     },
     sections: [
       {
-        header: "Nylige endringer",
+        header: "Siste endringer",
         searchableParameters: ["title"],
         rows: activityRows
       },
