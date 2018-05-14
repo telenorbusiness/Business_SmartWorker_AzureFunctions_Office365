@@ -152,11 +152,11 @@ function createMicroApp(documents, activities) {
     else if(activitiesAdded.length === 3) {
       break;
     }
-    else if(activity.driveItem.file && (activity.action.edit || activity.action.create || activity.action.comment)) {
+    else if(activity.driveItem.file && (activity.action.edit || activity.action.create || activity.action.comment || activity.action.rename)) {
       activityRows.push({
         type: "rich-text",
         title: activity.driveItem.name,
-        tag: getPrettyDate(activity.driveItem.lastModifiedDateTime),
+        tag: getPrettyDate(activity.times.recordedDateTime),
         thumbnailUrl:
           "https://api.smartansatt.telenor.no/cdn/office365/files.png",
         onClick: {
