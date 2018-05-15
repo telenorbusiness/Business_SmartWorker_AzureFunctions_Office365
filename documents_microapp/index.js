@@ -139,7 +139,7 @@ function getRecentActivity(graphToken, sharepointId) {
 
 function getActionType(action) {
   if(action.edit) {
-    return "Redigert";
+    return "Endret";
   }
   else if(action.create) {
     return "Opprettet";
