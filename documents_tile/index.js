@@ -87,7 +87,7 @@ function getDocumentsFromSharepoint(graphToken, siteId) {
     uri: encodeURI(
         "https://graph.microsoft.com/beta/sites/" +
           siteId +
-          "/drive/root/children"
+          "/drive/root"
       ),
     headers: {
       Authorization: "Bearer " + graphToken
@@ -96,11 +96,11 @@ function getDocumentsFromSharepoint(graphToken, siteId) {
 
   return requestPromise(requestOptions)
     .then(function(response) {
-      return response.value;
+      return response;
     });
 }
 
-function createTile(documents = []) {
+function createTile(sharepointResponse = {}) {
   var tile = {
     type: "icon",
     iconUrl:
@@ -115,20 +115,10 @@ function createTile(documents = []) {
     }
   };
 
-  if (documents.length > 0) {
-    var lastModifiedDoc = documents[0];
-
-    for (let i = 0; i < documents.length; i++) {
-      if (
-        moment(lastModifiedDoc.lastModifiedDateTime).isBefore(
-          moment(documents[i].lastModifiedDateTime)
-        )
-      ) {
-        lastModifiedDoc = documents[i];
-      }
-    }
-    tile.footnote = "Siste endring: " + getPrettyDate(lastModifiedDoc.lastModifiedDateTime);
+  if(sharepointResponse.lastModifiedDateTime) {
+    tile.footnote = "Siste endring: " + getPrettyDate(sharepointResponse.lastModifiedDateTime);
   }
+
   return tile;
 }
 
