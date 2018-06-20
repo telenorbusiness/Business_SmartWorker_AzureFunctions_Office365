@@ -126,6 +126,8 @@ function createTile(activities = []) {
 
   }
 
+  return tile;
+
 }
 
 function createGenericTile() {
