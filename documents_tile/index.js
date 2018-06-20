@@ -113,8 +113,8 @@ function createTile(activities = []) {
     }
   };
 
-  for (let i = 0; i < activities.value.length; i++) {
-    const activity = activities.value[i];
+  for (let i = 0; i < activities.length; i++) {
+    const activity = activities[i];
 
     if(!activity.driveItem) {
       continue;
