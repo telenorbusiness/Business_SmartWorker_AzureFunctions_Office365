@@ -23,11 +23,11 @@ module.exports = function(context, req) {
       }
     })
     .then((sharepointId) => {
-      return getDocumentsFromSharepoint(graphToken, sharepointId);
+      return getRecentActivity(graphToken, sharepointId);
     })
-    .then(documents => {
+    .then(activities => {
       let res = {
-        body: createTile(documents)
+        body: createTile(activities)
       };
       return context.done(null, res);
     })
@@ -78,29 +78,27 @@ function getStorageInfo(rowKey, context) {
   });
 }
 
-function getDocumentsFromSharepoint(graphToken, siteId) {
-
-  var requestOptions = {
+function getRecentActivity(graphToken, sharepointId) {
+  const requestOptions = {
     method: "GET",
     json: true,
     simple: true,
     uri: encodeURI(
-        "https://graph.microsoft.com/beta/sites/" +
-          siteId +
-          "/drive/root"
-      ),
+      "https://graph.microsoft.com/beta/sites/" +
+      sharepointId +
+      "/drive/activities?$expand=driveItem&$top=20"),
     headers: {
       Authorization: "Bearer " + graphToken
     }
   };
 
   return requestPromise(requestOptions)
-    .then(function(response) {
-      return response;
+    .then((response) => {
+      return response.value;
     });
 }
 
-function createTile(sharepointResponse = {}) {
+function createTile(activities = []) {
   var tile = {
     type: "icon",
     iconUrl:
@@ -115,11 +113,19 @@ function createTile(sharepointResponse = {}) {
     }
   };
 
-  if(sharepointResponse.lastModifiedDateTime) {
-    tile.footnote = "Siste endring: " + getPrettyDate(sharepointResponse.lastModifiedDateTime);
+  for (let i = 0; i < activities.value.length; i++) {
+    const activity = activities.value[i];
+
+    if(!activity.driveItem) {
+      continue;
+    }
+    else if(activity.driveItem.file && (activity.action.edit || activity.action.create || activity.action.comment || activity.action.rename || activity.action.move)) {
+      tile.footnote = "Siste endring: " + getPrettyDate(activity.times.recordedDateTime);
+      return tile;
+    }
+
   }
 
-  return tile;
 }
 
 function createGenericTile() {
