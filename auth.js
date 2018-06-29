@@ -51,7 +51,9 @@ let authenticateReferenceToken = function(req, context) {
           }
           return Promise.resolve({
             status: 200,
-            azureUserToken: userinfo.azureUserToken
+            azureUserToken: userinfo.azureUserToken,
+            configId: userinfo.confidId,
+            administrator: userinfo.administrator
           });
         } else if (!lodash.isUndefined(userinfo.error)) {
           return Promise.resolve({ status: 200, message: userinfo });
