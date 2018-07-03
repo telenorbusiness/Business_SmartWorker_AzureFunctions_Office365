@@ -1,6 +1,7 @@
 var Promise = require("bluebird");
 var azure = Promise.promisifyAll(require("azure-storage"));
 const reftokenAuth = require("../auth");
+cosnt Joi = require('joi');
 
 
 module.exports = function(context, req) {
@@ -15,18 +16,16 @@ module.exports = function(context, req) {
       }
     })
     .then(response => {
-      let sharepointId = req.body.sharepointId;
-      let configId = req.body.configId;
-
-      if (sharepointId && configId) {
-        return insertUserInfo(configId, sharepointId, context);
+      const validation = validateBody(req.body);
+      if (validation.error === null) {
+        return insertUserInfo(req.body.configId, req.body.sharepointInfo, context);
       }
       return null;
     })
     .then(result => {
       let message = result === null ? "Missing necessary properties in body" : "Oppdaterte sharepoint Id";
       let res = {
-        body: { type: "feedback", title: "Sharepoint konfigurasjon", message: message }
+        body: { type: "reload", title: "Sharepoint konfigurasjon", message: message }
       };
       return context.done(null, res);
     })
@@ -46,7 +45,7 @@ module.exports = function(context, req) {
     });
 };
 
-function insertUserInfo(configId, sharepointId, context) {
+function insertUserInfo(configId, sharepointInfo, context) {
   let tableService = azure.createTableService(
     getEnvironmentVariable("AzureWebJobsStorage")
   );
@@ -59,7 +58,7 @@ function insertUserInfo(configId, sharepointId, context) {
       let entity = {
         PartitionKey: entGen.String("user_sharepointsites"),
         RowKey: entGen.String(configId),
-        sharepointId: entGen.String(sharepointId)
+        sharepointInfo: entGen.String(JSON.stringify(sharepointInfo))
       };
       return tableService.insertOrReplaceEntityAsync("documents", entity);
     })
@@ -74,6 +73,21 @@ function checkAuthKey(key) {
     return true;
   } else throw new Error("Not a valid config key");
 }
+
+function validateBody(body) {
+
+  const schema = Joi.object().keys({
+    configId: Joi.string().guid().required(),
+    sharepointInfo: Joi.object().keys({
+      displayName: Joi.string().required(),
+      id: Joi.string.guid().required,
+      webUrl: Joi.string.optional()
+    })
+  });
+
+  return Joi.validate(body, schema);
+}
+
 function getEnvironmentVariable(name) {
   return process.env[name];
 }
