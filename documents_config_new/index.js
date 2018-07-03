@@ -1,7 +1,7 @@
 var Promise = require("bluebird");
 var azure = Promise.promisifyAll(require("azure-storage"));
 const reftokenAuth = require("../auth");
-cosnt Joi = require('joi');
+const Joi = require('joi');
 
 
 module.exports = function(context, req) {
