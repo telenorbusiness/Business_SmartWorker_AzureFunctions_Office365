@@ -145,7 +145,8 @@ function createSearchMicroApp(
               type: "rich-text",
               title: defaultValue.displayName,
               text: defaultValue.webUrl,
-              content: "Id: " + defaultValue.id
+              content: "Id: " + defaultValue.id,
+              numContentLines: 0
             }
           ]
         });
@@ -159,20 +160,22 @@ function createSearchMicroApp(
           title: site.displayName,
           text: site.webUrl,
           content: "Id: " + site.id,
+          numContentLines: 0,
           onClick: {
             type: "call-api",
             url:
               "https://" +
               getEnvironmentVariable("appName") +
               ".azurewebsites.net/api/documents_config_new",
-            httpMethod: "GET",
+            httpMethod: "POST",
             httpBody: {
               configId: configId,
               sharepointInfo: {
                 displayName: site.displayName,
                 webUrl: site.webUrl,
                 id: site.id
-              }
+              },
+            configKey: process.env["configKey"]
             },
             alert: {
               type: "query",
