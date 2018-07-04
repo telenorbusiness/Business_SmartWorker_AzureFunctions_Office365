@@ -144,9 +144,7 @@ function createSearchMicroApp(
             {
               type: "rich-text",
               title: defaultValue.displayName,
-              text: defaultValue.webUrl,
-              content: "Id: " + defaultValue.id,
-              numContentLines: 0
+              text: defaultValue.webUrl
             }
           ]
         });
@@ -159,8 +157,6 @@ function createSearchMicroApp(
           type: "rich-text",
           title: site.displayName,
           text: site.webUrl,
-          content: "Id: " + site.id,
-          numContentLines: 0,
           onClick: {
             type: "call-api",
             url:
