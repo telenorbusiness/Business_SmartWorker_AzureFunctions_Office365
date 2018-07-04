@@ -1,58 +1,58 @@
-
 var Promise = require("bluebird");
 var requestPromise = require("request-promise");
 const reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
 var azure = require("azure-storage");
-var lodash = require("lodash");
 var tableService = azure.createTableService(getEnvironmentVariable("AzureWebJobsStorage"));
 
 module.exports = function(context, req) {
-//  let graphToken;
-//  let sub;
+  let graphToken;
+  let sub;
   Promise.try(() => {
     return reftokenAuth(req);
   })
     .then(response => {
-      if (response.status === 200 && !response.message) {
-
-        if(checkIsAdminFromSmartAnsatt(response) && response.configId) {
-          return getStorageInfo(response.configId, context)
-          .then((defaultValue) => {
-            const res = {
-              body: createSearchMicroApp(response.configId, defaultValue, response.azureUserToken, req.query.search)
-            };
-            return context.done(null, res);
-          })
-        }
-        else {
-          const res = {
-            body: {
-              id: "denied_config",
-              sections: [{
-                rows: [{ type: "text", text: "Access denied. You're not an administrator."}]
-              }]
-            }
-          };
-          return context.done(null, res);
-        }
-        //graphToken = response.azureUserToken;
-        //sub = getUpnFromJWT(graphToken, context);
-        //return getStorageInfo(sub, context);
+      if (response.status === 200 && response.azureUserToken) {
+        graphToken = response.azureUserToken;
+        sub = getUpnFromJWT(graphToken, context);
+        return getStorageInfo(sub, context);
       } else {
-        throw new atWorkValidateError("Atwork validation error", response);
+        throw new atWorkValidateError(response.message, response.status);
       }
     })
+    .then(sharepointId => {
+      return {documents: getDocumentsFromSharepoint(graphToken, sharepointId), recentFiles: getRecentActivity(graphToken, sharepointId)};
+    })
+    .props()
+    .then(({ documents, recentFiles }) => {
+      let res = {
+        body: createMicroApp(documents, recentFiles)
+      };
+      return context.done(null, res);
+    })
     .catch(tableStorageError, error => {
+      context.log("Finding userSites returned with: " + error);
       let res = {
         body: createEmptyMicroApp()
       };
       return context.done(null, res);
     })
     .catch(atWorkValidateError, error => {
+      context.log("Logger: " + error);
       let res = {
-        status: error.response.status,
-        body: error.response.message
+        status: error.response,
+        body: JSON.parse(error.message)
+      };
+      return context.done(null, res);
+    })
+    .catch(sharePointError, error => {
+      context.log(error);
+      context.log(
+        "Error fetching from sharePoint, falling back to fetch from shared documents in onedrive"
+      );
+      let res = {
+        status: 200,
+        body: "Error from sharepoint"
       };
       return context.done(null, res);
     })
@@ -80,67 +80,49 @@ function getStorageInfo(rowKey, context) {
   return new Promise((resolve, reject) => {
     tableService.retrieveEntity("documents", "user_sharepointsites", rowKey, (err, result, response) => {
       if(!err) {
-        resolve(JSON.parse(result.sharepointInfo._));
+        resolve(result.sharepointId._);
       }
       else {
-        if(err.statusCode === 404) {
-          resolve(null);
-        }
-        else {
-          reject(new tableStorageError(err));
-          context.log(err);
-        }
+        context.log(err);
+        reject(new tableStorageError(err));
       }
     });
   });
 }
 
-
-function createMicroApp(configId, defaultValue) {
-
-  var microApp = {
-    id: "documents_config",
-    sections: [
-      {
-        header: "Legg til sharepoint id",
-        rows: [
-        {
-          type: "input",
-          title: "Sharepoint ID",
-          form: {
-            type: "text",
-            dataType: "text",
-            inputKey: "sharepointId",
-            inputPlaceholder: "Sharepoint ID",
-            defaultValue: defaultValue === null ? "" : defaultValue //FETCH NÅVÆRENDE
-          }
-        },
-        {
-         type: "button",
-         onClick: {
-          type: "call-api",
-          url: "https://" +getEnvironmentVariable("appName") +".azurewebsites.net/api/documents_config_new", //NEW ENDPOINT
-          httpMethod: "PUT",
-          httpBody: { configId: configId, configKey: process.env["configKey"] },
-          includeInputKeys: ["sharepointId"]
-          },
-         title: "LAGRE"
-        }]
-      }]
+function getDocumentsFromSharepoint(graphToken, sharepointId) {
+  var requestOptions = {
+    method: "GET",
+    json: true,
+    simple: true,
+    uri: encodeURI(
+      "https://graph.microsoft.com/beta/sites/" +
+        sharepointId +
+        "/drive/root/children"
+    ),
+    headers: {
+      Authorization: "Bearer " + graphToken
+    }
   };
 
-  return microApp;
+  return requestPromise(requestOptions)
+    .then(function(response) {
+      return response;
+    })
+    .catch(function(error) {
+      throw new sharePointError(error);
+    });
 }
 
-function createSearchMicroApp(configId, defaultValue, graphToken, search = '') {
+function getRecentActivity(graphToken, sharepointId) {
   const requestOptions = {
     method: "GET",
     json: true,
     simple: true,
     uri: encodeURI(
-      "https://graph.microsoft.com/v1.0/sites/?search=" +
-      search +
-      "&$top=20"),
+      "https://graph.microsoft.com/beta/sites/" +
+      sharepointId +
+      "/drive/activities?$expand=driveItem&$top=20"),
     headers: {
       Authorization: "Bearer " + graphToken
     }
@@ -148,68 +130,140 @@ function createSearchMicroApp(configId, defaultValue, graphToken, search = '') {
 
   return requestPromise(requestOptions)
     .then((response) => {
-      const sharepointSites = response.value;
-
-      var microApp = { id: "config_microapp_documents",
-                        search: {
-                          type: "server",
-                          placeholder: "Søk etter sharepoint sider knyttet til din bedrift"
-                        },
-                        sections: []
-                      };
-
-      if(defaultValue !== null) {
-        microApp.sections.push({
-          header: "Nåværende sharepoint side",
-          rows: [{
-            type: "rich-text",
-            title: defaultValue.displayName,
-            text: defaultValue.webUrl,
-            content: "Id: " + defaultValue.id
-          }]
-        });
-      }
-
-      var rows = [];
-
-      sharepointSites.forEach((site) => {
-        rows.push({
-          type: "rich-text",
-          title: site.displayName,
-          text: site.webUrl,
-          content: "Id: " + site.id,
-          onClick: {
-            type: "call-api",
-            url: "https://" +getEnvironmentVariable("appName") +".azurewebsites.net/api/documents_config_new",
-            httpMethod: "GET",
-            httpBody: {
-              configId: configId,
-              sharepointInfo: {
-                displayName: site.displayName,
-                webUrl: site.webUrl,
-                id: site.id
-              }
-            },
-            alert: {
-              type: "query",
-              title: "Godkjenn valg",
-              message: "Er du sikker på at du vil gi tilgang til " + site.displayName + " til de valgte gruppene?"
-            }
-          }
-        });
-      });
-
-      microApp.sections.push({
-        header: "Tilgjengelige sharepoint sider",
-        rows: rows
-      });
-
-      return microApp;
-
+      return response;
     })
     .catch((error) => {
-      return { id: "graphExplorer_error", sections: [{ rows: [ { type: "text", text: "Feil ved kommunikasjon mot Microsoft Graph API'et" }]}]};
+      throw new sharePointError(error);
     });
+}
+
+function getActionType(action) {
+  if(action.edit) {
+    return "Endret";
+  }
+  else if(action.create) {
+    return "Opprettet";
+  }
+  else if(action.comment) {
+    return "Ny kommentar";
+  }
+  else if(action.rename) {
+    return "Nytt navn";
+  }
+  else if(action.move) {
+    return "Flyttet";
+  }
+  else {
+    return "";
+  }
+}
+
+function createMicroApp(documents, activities) {
+  let folderRows = [];
+  let fileRows = [];
+  let activityRows = [];
+  let activitiesAdded = [];
+
+  for (let i = 0; i < activities.value.length; i++) {
+    const activity = activities.value[i];
+
+    if(!activity.driveItem || activitiesAdded.includes(activity.driveItem.id)) {
+      continue;
+    }
+    else if(activitiesAdded.length === 3) {
+      break;
+    }
+    else if(activity.driveItem.file && (activity.action.edit || activity.action.create || activity.action.comment || activity.action.rename || activity.action.move)) {
+      activityRows.push({
+        type: "rich-text",
+        title: activity.driveItem.name,
+        content: getActionType(activity.action),
+        tag: getPrettyDate(activity.times.recordedDateTime),
+        thumbnailUrl:
+          "https://api.smartansatt.telenor.no/cdn/office365/files.png",
+        onClick: {
+          type: "open-url",
+          url: activity.driveItem.webUrl
+        }
+      });
+      activitiesAdded.push(activity.driveItem.id);
+    }
+
+  }
+
+  for (let i = 0; i < documents.value.length; i++) {
+    if (!documents.value[i].folder) {
+      fileRows.push({
+        type: "rich-text",
+        title: documents.value[i].name,
+        tag: getPrettyDate(documents.value[i].lastModifiedDateTime),
+        thumbnailUrl:
+          "https://api.smartansatt.telenor.no/cdn/office365/files.png",
+        onClick: {
+          type: "open-url",
+          url: documents.value[i].webUrl
+        }
+      });
+    } else {
+      let driveId;
+      let itemId;
+      // If driveitems are fetched with 'sharedWithMe'
+      if (
+        documents.value[i].remoteItem &&
+        documents.value[i].remoteItem.parentReference
+      ) {
+        driveId = documents.value[i].remoteItem.parentReference.driveId;
+        itemId = documents.value[i].remoteItem.id;
+      }
+      // If driveitems are fetched from sharePoint
+      if (documents.value[i].id && documents.value[i].parentReference) {
+        driveId = documents.value[i].parentReference.driveId;
+        itemId = documents.value[i].id;
+      }
+      folderRows.push({
+        type: "rich-text",
+        title: documents.value[i].name,
+        thumbnailUrl:
+          "https://api.smartansatt.telenor.no/cdn/office365/folder.png",
+        onClick: {
+          type: "call-api",
+          url:
+            "https://" +
+            getEnvironmentVariable("appName") +
+            ".azurewebsites.net/api/documents_microapp_subview",
+          httpBody: {
+            folderName: documents.value[i].name,
+            driveId: driveId,
+            itemId: itemId,
+            depth: 0
+          },
+          httpMethod: "POST"
+        }
+      });
+    }
+  }
+
+  var microApp = {
+    id: "documents_main",
+    search: {
+      type: "local",
+      placeholder: "Søk etter dokumenter"
+    },
+    sections: [
+      {
+        header: "Siste endringer",
+        searchableParameters: ["title"],
+        rows: activityRows
+      },
+      {
+        header: "Bibliotek",
+        searchableParameters: ["title"],
+        rows: folderRows.concat(fileRows)
+      }
+    ]
+  };
+
+  return microApp;
 }
 
 function createEmptyMicroApp() {
@@ -220,7 +274,7 @@ function createEmptyMicroApp() {
         rows: [
           {
             type: "rich-text",
-            content: "Det er ingen sharepoint sider knyttet til din config.."
+            content: "Det er ingen sharepoint sider knyttet til din bruker"
           }
         ]
       }
@@ -228,14 +282,19 @@ function createEmptyMicroApp() {
   };
   return microApp;
 }
-
-
-function checkIsAdminFromSmartAnsatt( res ){
-  if( true === lodash.get(res, "administrator", false) ){
-    return true;
-  }
-  else {
-    return false;
+function getPrettyDate(date) {
+  let time = moment
+    .utc(date)
+    .tz("Europe/Oslo")
+    .locale("nb");
+  let now = moment
+    .utc()
+    .tz("Europe/Oslo")
+    .locale("nb");
+  if (time.isSame(now, "day")) {
+    return time.format("H:mm");
+  } else {
+    return time.format("Do MMM");
   }
 }
 
@@ -247,6 +306,12 @@ class atWorkValidateError extends Error {
   constructor(message, response) {
     super(message);
     this.response = response;
+  }
+}
+
+class sharePointError extends Error {
+  constructor(message) {
+    super(message);
   }
 }
 
