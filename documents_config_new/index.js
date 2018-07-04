@@ -15,15 +15,14 @@ module.exports = function(context, req) {
         throw new atWorkValidateError("AtWork validate error", res);
       }
     })
+    .then(() => {
+      return validateBody(req.body);
+    })
     .then(response => {
-      const validation = validateBody(req.body);
-      if (validation.error === null) {
-        return insertUserInfo(req.body.configId, req.body.sharepointInfo, context);
-      }
-      return null;
+      return insertUserInfo(req.body.configId, req.body.sharepointInfo, context);
     })
     .then(result => {
-      let message = result === null ? "Missing necessary properties in body" : "Oppdaterte sharepoint Id";
+      let message =  "Oppdaterte sharepoint Id";
       let res = {
         body: { type: "reload", title: "Sharepoint konfigurasjon", message: message }
       };
@@ -33,6 +32,20 @@ module.exports = function(context, req) {
       let res = {
         status: error.response.status,
         body: error.response.message
+      };
+      return context.done(null, res);
+    })
+    .catch(tableStorageError, error => {
+      context.log("Could not insert config: " + error);
+      let res = {
+        body: { type: "feedback", title: "Feil", message: "Feil ved opprettelse av konfigurasjon" }
+      };
+      return context.done(null, res);
+    })
+    .catch(validationError, error => {
+      context.log("Error validating body: " + error);
+      let res = {
+        body: { type: "feedback", title: "Feil", message: "Feil ved validering av instilling" }
       };
       return context.done(null, res);
     })
@@ -65,6 +78,9 @@ function insertUserInfo(configId, sharepointInfo, context) {
     .then(result => {
       context.log("Added row! -> " + JSON.stringify(result));
       return result;
+    })
+    .catch((error) => {
+      throw new tableStorageError(error);
     });
 }
 
@@ -76,16 +92,26 @@ function checkAuthKey(key) {
 
 function validateBody(body) {
 
-  const schema = Joi.object().keys({
-    configId: Joi.string().guid().required(),
-    sharepointInfo: Joi.object().keys({
-      displayName: Joi.string().required(),
-      id: Joi.string.guid().required,
-      webUrl: Joi.string.optional()
-    })
-  });
+  return new Promise((resolve, reject) => {
+    const schema = {
+      configId: Joi.string().guid().required(),
+      sharepointInfo: Joi.object().keys({
+        displayName: Joi.string().required(),
+        id: Joi.string().required(),
+        webUrl: Joi.string().optional()
+      }),
+      configKey: Joi.string().guid().required()
+    };
 
-  return Joi.validate(body, schema);
+    Joi.validate(body, schema, (err, value) => {
+      if(err === null) {
+        resolve(true);
+      }
+      else {
+        reject (new validationError(err));
+      }
+    });
+  })
 }
 
 function getEnvironmentVariable(name) {
@@ -93,6 +119,12 @@ function getEnvironmentVariable(name) {
 }
 
 class tableStorageError extends Error {
+  constructor(message) {
+    super(message);
+  }
+}
+
+class validationError extends Error {
   constructor(message) {
     super(message);
   }
