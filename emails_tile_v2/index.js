@@ -11,10 +11,7 @@ module.exports = function(context, req) {
       if (response.status === 200 && response.azureUserToken) {
         return getUnreadMails(response.azureUserToken, context);
       } else {
-        throw new atWorkValidateError(
-          JSON.stringify(response.message),
-          response.status
-        );
+        throw new atWorkValidateError("Atwork validation error", response);
       }
     })
     .then(unreadMails => {
@@ -24,10 +21,9 @@ module.exports = function(context, req) {
       return context.done(null, res);
     })
     .catch(atWorkValidateError, error => {
-      context.log("Atwork error. response " + JSON.stringify(error.response));
       let res = {
-        status: error.response,
-        body: JSON.parse(error.message)
+        status: error.response.status,
+        body: error.response.message
       };
       return context.done(null, res);
     })

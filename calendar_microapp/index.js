@@ -12,8 +12,7 @@ module.exports = function(context, req) {
         return getAppointments(context, response.azureUserToken);
       } else {
         context.log("AtWork responded with: " + JSON.stringify(response));
-        throw new atWorkValidateError(response.message, response.status);
-      }
+        throw new atWorkValidateError("Atwork validation error", response);      }
     })
     .then(appointments => {
       let res = {
@@ -23,8 +22,8 @@ module.exports = function(context, req) {
     })
     .catch(atWorkValidateError, error => {
       let res = {
-        status: error.response,
-        body: error.message
+        status: error.response.status,
+        body: error.response.message
       };
       return context.done(null, res);
     })

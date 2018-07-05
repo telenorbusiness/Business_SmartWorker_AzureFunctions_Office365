@@ -74,15 +74,6 @@ module.exports = function(context, req) {
     });
 };
 
-function getUpnFromJWT(azureToken, context) {
-  let arrayOfStrings = azureToken.split(".");
-
-  let userObject = JSON.parse(
-    new Buffer(arrayOfStrings[1], "base64").toString()
-  );
-
-  return userObject.upn.toLowerCase();
-}
 
 function getStorageInfo(rowKey, context) {
   return new Promise((resolve, reject) => {

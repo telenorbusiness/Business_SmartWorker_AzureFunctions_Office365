@@ -11,8 +11,7 @@ module.exports = function(context, req) {
       if (response.status === 200 && response.azureUserToken) {
         return getMails(response.azureUserToken, context);
       } else {
-        throw new atWorkValidateError(response.message, response.status);
-      }
+        throw new atWorkValidateError("Atwork validation error", response);      }
     })
     .then(mails => {
       let res = {
@@ -21,10 +20,9 @@ module.exports = function(context, req) {
       return context.done(null, res);
     })
     .catch(atWorkValidateError, error => {
-      context.log("Atwork error: " + error.message);
       let res = {
-        status: error.response,
-        body: error.message
+        status: error.response.status,
+        body: error.response.message
       };
       return context.done(null, res);
     })

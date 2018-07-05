@@ -13,13 +13,16 @@ module.exports = function(context, req) {
     .then(response => {
       if (response.status === 200 && response.azureUserToken) {
         graphToken = response.azureUserToken;
-        let upn = getUpnFromJWT(graphToken, context);
-        return getStorageInfo(upn, context);
+
+        if(response.configId && response.configId !== null) {
+          return getStorageInfo(response.configId, true, context);
+        }
+        else {
+          let upn = getUpnFromJWT(graphToken);
+          return getStorageInfo(upn, false, context);
+        }
       } else {
-        throw new atWorkValidateError(
-          JSON.stringify(response.message),
-          response.status
-        );
+        throw new atWorkValidateError("Atwork validation error", response);
       }
     })
     .then((sharepointId) => {
@@ -39,10 +42,9 @@ module.exports = function(context, req) {
       return context.done(null, res);
     })
     .catch(atWorkValidateError, error => {
-      context.log("Logger: " + error.response);
       let res = {
-        status: error.response,
-        body: JSON.parse(error.message)
+        status: error.response.status,
+        body: error.response.message
       };
       return context.done(null, res);
     })
@@ -56,7 +58,7 @@ module.exports = function(context, req) {
     });
 };
 
-function getUpnFromJWT(azureToken, context) {
+function getUpnFromJWT(azureToken) {
   let arrayOfStrings = azureToken.split(".");
 
   let userObject = JSON.parse(new Buffer(arrayOfStrings[1], "base64").toString());
@@ -64,11 +66,17 @@ function getUpnFromJWT(azureToken, context) {
   return userObject.upn.toLowerCase();
 }
 
-function getStorageInfo(rowKey, context) {
+function getStorageInfo(rowKey, isConfigId, context) {
   return new Promise((resolve, reject) => {
     tableService.retrieveEntity("documents", "user_sharepointsites", rowKey, (err, result, response) => {
       if(!err) {
-        resolve(result.sharepointId._);
+        if(!isConfigId) {
+          resolve(result.sharepointId._);
+        }
+        else {
+          let sharepointInfo = JSON.parse(result.sharepointInfo._);
+          resolve(sharepointInfo.id);
+        }
       }
       else {
         context.log(err);

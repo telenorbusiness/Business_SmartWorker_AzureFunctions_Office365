@@ -16,8 +16,7 @@ module.exports = function(context, req) {
       if (response.status === 200 && response.azureUserToken) {
         return getDocuments(response.azureUserToken, context, driveId, itemId);
       } else {
-        throw new atWorkValidateError(response.message, response.status);
-      }
+        throw new atWorkValidateError("Atwork validation error", response);      }
     })
     .then(documents => {
       let res = {
@@ -29,10 +28,9 @@ module.exports = function(context, req) {
       return context.done(null, res);
     })
     .catch(atWorkValidateError, error => {
-      context.log("Logger: " + error.response);
       let res = {
-        status: error.response,
-        body: JSON.parse(error.message)
+        status: error.response.status,
+        body: error.response.message
       };
       return context.done(null, res);
     })

@@ -7,17 +7,21 @@ var tableService = azure.createTableService(getEnvironmentVariable("AzureWebJobs
 
 module.exports = function(context, req) {
   let graphToken;
-  let sub;
   Promise.try(() => {
     return reftokenAuth(req);
   })
     .then(response => {
       if (response.status === 200 && response.azureUserToken) {
         graphToken = response.azureUserToken;
-        sub = getUpnFromJWT(graphToken, context);
-        return getStorageInfo(sub, context);
+        if(response.configId && response.configId !== null) {
+          return getStorageInfo(response.configId, context);
+        }
+        else {
+          let upn = getUpnFromJWT(graphToken);
+          return getStorageInfo(upn, context);
+        }
       } else {
-        throw new atWorkValidateError(response.message, response.status);
+        throw new atWorkValidateError("Atwork validation error", response);
       }
     })
     .then(sharepointId => {
@@ -38,10 +42,9 @@ module.exports = function(context, req) {
       return context.done(null, res);
     })
     .catch(atWorkValidateError, error => {
-      context.log("Logger: " + error);
       let res = {
-        status: error.response,
-        body: JSON.parse(error.message)
+        status: error.response.status,
+        body: error.response.message
       };
       return context.done(null, res);
     })
@@ -66,7 +69,7 @@ module.exports = function(context, req) {
     });
 };
 
-function getUpnFromJWT(azureToken, context) {
+function getUpnFromJWT(azureToken) {
   let arrayOfStrings = azureToken.split(".");
 
   let userObject = JSON.parse(
@@ -76,14 +79,19 @@ function getUpnFromJWT(azureToken, context) {
   return userObject.upn.toLowerCase();
 }
 
-function getStorageInfo(rowKey, context) {
+function getStorageInfo(rowKey, isConfigId, context) {
   return new Promise((resolve, reject) => {
     tableService.retrieveEntity("documents", "user_sharepointsites", rowKey, (err, result, response) => {
       if(!err) {
-        resolve(result.sharepointId._);
+        if(!isConfigId) {
+          resolve(result.sharepointId._);
+        }
+        else {
+          let sharepointInfo = JSON.parse(result.sharepointInfo._);
+          resolve(sharepointInfo.id);
+        }
       }
       else {
-        context.log(err);
         reject(new tableStorageError(err));
       }
     });
