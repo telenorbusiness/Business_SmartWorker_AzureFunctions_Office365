@@ -83,7 +83,12 @@ function getStorageInfo(rowKey, context) {
       rowKey,
       (err, result, response) => {
         if (!err) {
-          resolve(JSON.parse(result.sharepointInfo._));
+          if(result.sharepointInfo) {
+            resolve(JSON.parse(result.sharepointInfo._));
+          }
+          else {
+            resolve(null);
+          }
         } else {
           if (err.statusCode === 404) {
             resolve(null);
