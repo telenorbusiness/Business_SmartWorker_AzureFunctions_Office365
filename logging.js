@@ -28,7 +28,6 @@ function sendRequest({ method, uri, data, retry = true }){
 
 export default function idplog({message, sender}){
   const idpUrl = process.env["idpUrl"].replace(/\.well-known\/openid-configuration/g, "");
-
   idpUrl = idpUrl+'echolog'
 
   const data = {
