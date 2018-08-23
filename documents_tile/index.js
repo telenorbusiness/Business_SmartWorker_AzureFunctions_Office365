@@ -4,7 +4,7 @@ const reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
 var azure = require("azure-storage");
 var tableService = azure.createTableService(getEnvironmentVariable("AzureWebJobsStorage"));
-var logging = require("../logging");
+var idplog = require("../logging");
 
 module.exports = function(context, req) {
   let graphToken;
@@ -33,7 +33,7 @@ module.exports = function(context, req) {
       let res = {
         body: createTile(activities)
       };
-      logging.idplog({message: "Completed sucessfully", sender: "document-tile"})
+      idplog({message: "Completed sucessfully", sender: "document-tile"})
       return context.done(null, res);
     })
     .catch(tableStorageError, error => {
