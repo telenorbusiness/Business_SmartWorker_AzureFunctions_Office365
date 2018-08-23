@@ -1,4 +1,5 @@
-const rp = require("request-promise");
+let rp = require("request-promise");
+
 
 function sendRequest({ method, uri, data, retry = true }){
   return rp({
@@ -27,7 +28,7 @@ function sendRequest({ method, uri, data, retry = true }){
 }
 
 let idplog = function({message, sender}){
-  const idpUrl = process.env["idpUrl"].replace(/\.well-known\/openid-configuration/g, "");
+  let idpUrl = process.env["idpUrl"].replace(/\.well-known\/openid-configuration/g, "");
   idpUrl = idpUrl+'echolog'
 
   const data = {
