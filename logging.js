@@ -1,4 +1,4 @@
-import rp from 'request-promise';
+const rp = require("request-promise");
 
 function sendRequest({ method, uri, data, retry = true }){
   return rp({
@@ -35,6 +35,6 @@ let idplog = function({message, sender}){
     message
   }
   return sendRequest({method: "put", uri: idpUrl, data})
-}
+};
 
 module.exports = idplog;
