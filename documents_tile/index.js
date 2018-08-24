@@ -37,6 +37,7 @@ module.exports = function(context, req) {
       return context.done(null, res);
     })
     .catch(tableStorageError, error => {
+      idplog({message: "Error: User not in storage, creating generic tile", sender: "document-tile"})
       context.log("User not in storage, creating generic tile");
       let res = {
         body: createGenericTile()
@@ -44,6 +45,7 @@ module.exports = function(context, req) {
       return context.done(null, res);
     })
     .catch(atWorkValidateError, error => {
+      idplog({message: "Error: atWorkValidateError: "+error, sender: "document-tile"})
       let res = {
         status: error.response.status,
         body: error.response.message
@@ -51,6 +53,7 @@ module.exports = function(context, req) {
       return context.done(null, res);
     })
     .catch(error => {
+      idplog({message: "Error: Unknown error: "+error, sender: "document-tile"})
       context.log(error);
       let res = {
         status: 500,
