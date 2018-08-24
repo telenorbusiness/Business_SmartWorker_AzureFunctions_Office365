@@ -2,6 +2,7 @@ var Promise = require("bluebird");
 var requestPromise = require("request-promise");
 var reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
+var idplog = require("../logging");
 
 module.exports = function(context, req) {
   Promise.try(() => {
