@@ -3,6 +3,8 @@ var requestPromise = require("request-promise");
 const reftokenAuth = require("../auth");
 var azure = require("azure-storage");
 var lodash = require("lodash");
+var idplog = require("../logging");
+
 var tableService = azure.createTableService(
   getEnvironmentVariable("AzureWebJobsStorage")
 );
@@ -45,6 +47,7 @@ module.exports = function(context, req) {
               ]
             }
           };
+          idplog({message: "Completed sucessfully", sender: "documents_config_microapp", status: "200"});
           return context.done(null, res);
         }
       } else {
@@ -55,6 +58,7 @@ module.exports = function(context, req) {
       let res = {
         body: createEmptyMicroApp()
       };
+      idplog({message: "tableStorageError: "+error, sender: "documents_config_microapp", status: "204"});
       return context.done(null, res);
     })
     .catch(atWorkValidateError, error => {
@@ -62,6 +66,7 @@ module.exports = function(context, req) {
         status: error.response.status,
         body: error.response.message
       };
+      idplog({message: "error: atWorkValidateError: "+error, sender: "documents_config_microapp", status: error.response.status});
       return context.done(null, res);
     })
     .catch(error => {
@@ -70,6 +75,7 @@ module.exports = function(context, req) {
         status: 500,
         body: "An unexpected error occurred"
       };
+      idplog({message: "error: unknown error: "+error, sender: "documents_config_microapp", status: "500"});
       return context.done(null, res);
     });
 };
