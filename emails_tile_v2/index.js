@@ -2,6 +2,7 @@ var Promise = require("bluebird");
 var requestPromise = require("request-promise");
 const reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
+var idplog = require("../logging");
 
 module.exports = function(context, req) {
   Promise.try(() => {
@@ -18,6 +19,7 @@ module.exports = function(context, req) {
       let res = {
         body: createTile(unreadMails)
       };
+      idplog({message: "Completed sucessfully", sender: "email_tile_v2", status: "200"})
       return context.done(null, res);
     })
     .catch(atWorkValidateError, error => {
@@ -25,6 +27,7 @@ module.exports = function(context, req) {
         status: error.response.status,
         body: error.response.message
       };
+      idplog({message: "Error: atWorkValidateError: "+error, sender: "email_tile_v2", status: error.response.status})
       return context.done(null, res);
     })
     .catch(error => {
@@ -32,6 +35,7 @@ module.exports = function(context, req) {
       let res = {
         body: error.message
       };
+      idplog({message: "Error: unknown error: "+error, sender: "email_tile_v2", status: "500"})
       return context.done(null, res);
     });
 };
