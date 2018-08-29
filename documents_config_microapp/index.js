@@ -14,8 +14,27 @@ module.exports = function(context, req) {
     return reftokenAuth(req);
   })
     .then(response => {
-      if (response.status === 200 && !response.message) {
-        if (checkIsAdminFromSmartAnsatt(response) && response.configId) {
+      if (response.status === 200) {
+        if(!response.azureUserToken) {
+          const res = {
+            body: {
+              id: "noAzureUserToken",
+              sections: [
+                {
+                  rows: [
+                    {
+                      type: "text",
+                      text: "Access denied. You do not have an Azure User Token."
+                    }
+                  ]
+                }
+              ]
+            }
+          };
+          idplog({message: "NoAzureUserTokenError", sender: "documents_config_microapp", status: 200});
+          return context.done(null, res);
+        }
+        else if (checkIsAdminFromSmartAnsatt(response) && response.configId) {
           return getStorageInfo(response.configId, context)
             .then(defaultValue => {
               return createSearchMicroApp(
@@ -195,6 +214,7 @@ function createSearchMicroApp(
       return microApp;
     })
     .catch(error => {
+      idplog({message: "Error: "+error, sender: "documents_config_microapp", status: error.statusCode});
       return {
         id: "graphExplorer_error",
         sections: [

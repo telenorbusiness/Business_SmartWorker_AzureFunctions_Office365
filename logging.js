@@ -21,13 +21,12 @@ function sendRequest({ method, uri, data, retry = true }){
         return sendRequest({ method, uri, data, retry: false });
     }
     else {
-      context.error(response.body);
       throw new Error("Error while communicating with idp");
     }
   });
 }
 
-let idplog = function({message, sender}){
+let idplog = function({ message, sender}){
   let idpUrl = process.env["idpUrl"].replace(/\.well-known\/openid-configuration/g, "");
   idpUrl = idpUrl+'echolog'
 
@@ -35,7 +34,7 @@ let idplog = function({message, sender}){
     sender,
     message
   }
-  return sendRequest({method: "put", uri: idpUrl, data})
+  return sendRequest({ method: "put", uri: idpUrl, data})
 };
 
 module.exports = idplog;
