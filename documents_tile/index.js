@@ -4,6 +4,7 @@ const reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
 var azure = require("azure-storage");
 var tableService = azure.createTableService(getEnvironmentVariable("AzureWebJobsStorage"));
+var idplog = require("../logging");
 
 module.exports = function(context, req) {
   let graphToken;
@@ -32,9 +33,11 @@ module.exports = function(context, req) {
       let res = {
         body: createTile(activities)
       };
+      idplog({message: "Completed sucessfully", sender: "documents_tile", status: "200"})
       return context.done(null, res);
     })
     .catch(tableStorageError, error => {
+      idplog({message: "Error: User not in storage, creating generic tile", sender: "documents_tile", status: "204"})
       context.log("User not in storage, creating generic tile");
       let res = {
         body: createGenericTile()
@@ -42,6 +45,7 @@ module.exports = function(context, req) {
       return context.done(null, res);
     })
     .catch(atWorkValidateError, error => {
+      idplog({message: "Error: atWorkValidateError: "+error, sender: "documents_tile", status: error.response.status})
       let res = {
         status: error.response.status,
         body: error.response.message
@@ -49,6 +53,7 @@ module.exports = function(context, req) {
       return context.done(null, res);
     })
     .catch(error => {
+      idplog({message: "Error: Unknown error: "+error, sender: "documents_tile", status: "500"})
       context.log(error);
       let res = {
         status: 500,

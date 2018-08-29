@@ -3,6 +3,7 @@ var requestPromise = require("request-promise");
 const reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
 var azure = require("azure-storage");
+var idplog = require("../logging");
 var tableService = azure.createTableService(getEnvironmentVariable("AzureWebJobsStorage"));
 
 module.exports = function(context, req) {
@@ -32,6 +33,7 @@ module.exports = function(context, req) {
       let res = {
         body: createMicroApp(documents, recentFiles)
       };
+      idplog({message: "Completed sucessfully", sender: "documents_microapp", status: "200"});
       return context.done(null, res);
     })
     .catch(tableStorageError, error => {
@@ -39,6 +41,7 @@ module.exports = function(context, req) {
       let res = {
         body: createEmptyMicroApp()
       };
+      idplog({message: "tableStorageError: ", sender: "documents_microapp", status: "204"});
       return context.done(null, res);
     })
     .catch(atWorkValidateError, error => {
@@ -46,6 +49,7 @@ module.exports = function(context, req) {
         status: error.response.status,
         body: error.response.message
       };
+      idplog({message: "Error: atWorkValidateError: "+error, sender: "documents_microapp", status: error.response.status});
       return context.done(null, res);
     })
     .catch(sharePointError, error => {
@@ -57,6 +61,7 @@ module.exports = function(context, req) {
         status: 200,
         body: "Error from sharepoint"
       };
+      idplog({message: "Error: sharePointError: "+error, sender: "documents_microapp", status: "200"});
       return context.done(null, res);
     })
     .catch(error => {
@@ -65,6 +70,7 @@ module.exports = function(context, req) {
         status: 500,
         body: "An unexpected error occurred"
       };
+      idplog({message: "Error: unknown error: "+error, sender: "documents_microapp", status: "500"});
       return context.done(null, res);
     });
 };
