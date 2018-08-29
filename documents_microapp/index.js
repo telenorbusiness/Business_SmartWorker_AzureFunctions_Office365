@@ -14,11 +14,11 @@ module.exports = function(context, req) {
       if (response.status === 200 && response.azureUserToken) {
         graphToken = response.azureUserToken;
         if(response.configId && response.configId !== null) {
-          return getStorageInfo(response.configId, context);
+          return getStorageInfo(response.configId, true, context);
         }
         else {
           let upn = getUpnFromJWT(graphToken);
-          return getStorageInfo(upn, context);
+          return getStorageInfo(upn, false, context);
         }
       } else {
         throw new atWorkValidateError("Atwork validation error", response);
