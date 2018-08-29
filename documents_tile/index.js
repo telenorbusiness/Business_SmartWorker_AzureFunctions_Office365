@@ -75,21 +75,33 @@ function getStorageInfo(rowKey, isConfigId, context) {
   return new Promise((resolve, reject) => {
     tableService.retrieveEntity("documents", "user_sharepointsites", rowKey, (err, result, response) => {
       if(!err) {
-        if(!isConfigId) {
-          resolve(result.sharepointId._);
+          context.log(JSON.stringify(result));
+       if(!isConfigId) {
+          if(result.sharepointId) {
+            resolve(result.sharepointId._);
+          }
+          else {
+            reject(new tableStorageError());
+          }
         }
         else {
-          let sharepointInfo = JSON.parse(result.sharepointInfo._);
-          resolve(sharepointInfo.id);
+          if(result.sharepointInfo) {
+            let sharepointInfo = JSON.parse(result.sharepointInfo._);
+            resolve(sharepointInfo.id);
+          }
+          else {
+            reject(new tableStorageError());
+          }
         }
       }
       else {
         context.log(err);
-        reject(new tableStorageError(err));
+        reject(new tableStorageError());
       }
     });
   });
 }
+
 
 function getRecentActivity(graphToken, sharepointId) {
   const requestOptions = {
