@@ -14,7 +14,7 @@ module.exports = function(context, req) {
     return reftokenAuth(req);
   })
     .then(response => {
-      if (response.status === 200) {
+      if (response.status === 200 && !response.message) {
         if(!response.azureUserToken) {
           const res = {
             body: {
