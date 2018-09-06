@@ -4,6 +4,7 @@ const reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
 var azure = require("azure-storage");
 var tableService = azure.createTableService(getEnvironmentVariable("AzureWebJobsStorage"));
+var idplog = require("../logging");
 
 module.exports = function(context, req) {
   let graphToken;
@@ -13,13 +14,16 @@ module.exports = function(context, req) {
     .then(response => {
       if (response.status === 200 && response.azureUserToken) {
         graphToken = response.azureUserToken;
-        let upn = getUpnFromJWT(graphToken, context);
-        return getStorageInfo(upn, context);
+
+        if(response.configId && response.configId !== null) {
+          return getStorageInfo(response.configId, true, context);
+        }
+        else {
+          let upn = getUpnFromJWT(graphToken);
+          return getStorageInfo(upn, false, context);
+        }
       } else {
-        throw new atWorkValidateError(
-          JSON.stringify(response.message),
-          response.status
-        );
+        throw new atWorkValidateError("Atwork validation error", response);
       }
     })
     .then((sharepointId) => {
@@ -29,9 +33,11 @@ module.exports = function(context, req) {
       let res = {
         body: createTile(activities)
       };
+      idplog({message: "Completed sucessfully", sender: "documents_tile", status: "200"})
       return context.done(null, res);
     })
     .catch(tableStorageError, error => {
+      idplog({message: "Error: User not in storage, creating generic tile", sender: "documents_tile", status: "204"})
       context.log("User not in storage, creating generic tile");
       let res = {
         body: createGenericTile()
@@ -39,14 +45,15 @@ module.exports = function(context, req) {
       return context.done(null, res);
     })
     .catch(atWorkValidateError, error => {
-      context.log("Logger: " + error.response);
+      idplog({message: "Error: atWorkValidateError: "+error, sender: "documents_tile", status: error.response.status})
       let res = {
-        status: error.response,
-        body: JSON.parse(error.message)
+        status: error.response.status,
+        body: error.response.message
       };
       return context.done(null, res);
     })
     .catch(error => {
+      idplog({message: "Error: Unknown error: "+error, sender: "documents_tile", status: "500"})
       context.log(error);
       let res = {
         status: 500,
@@ -56,7 +63,7 @@ module.exports = function(context, req) {
     });
 };
 
-function getUpnFromJWT(azureToken, context) {
+function getUpnFromJWT(azureToken) {
   let arrayOfStrings = azureToken.split(".");
 
   let userObject = JSON.parse(new Buffer(arrayOfStrings[1], "base64").toString());
@@ -64,19 +71,37 @@ function getUpnFromJWT(azureToken, context) {
   return userObject.upn.toLowerCase();
 }
 
-function getStorageInfo(rowKey, context) {
+function getStorageInfo(rowKey, isConfigId, context) {
   return new Promise((resolve, reject) => {
     tableService.retrieveEntity("documents", "user_sharepointsites", rowKey, (err, result, response) => {
       if(!err) {
-        resolve(result.sharepointId._);
+          context.log(JSON.stringify(result));
+       if(!isConfigId) {
+          if(result.sharepointId) {
+            resolve(result.sharepointId._);
+          }
+          else {
+            reject(new tableStorageError());
+          }
+        }
+        else {
+          if(result.sharepointInfo) {
+            let sharepointInfo = JSON.parse(result.sharepointInfo._);
+            resolve(sharepointInfo.id);
+          }
+          else {
+            reject(new tableStorageError());
+          }
+        }
       }
       else {
         context.log(err);
-        reject(new tableStorageError(err));
+        reject(new tableStorageError());
       }
     });
   });
 }
+
 
 function getRecentActivity(graphToken, sharepointId) {
   const requestOptions = {

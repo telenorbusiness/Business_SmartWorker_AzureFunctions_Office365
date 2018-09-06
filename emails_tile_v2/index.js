@@ -2,6 +2,7 @@ var Promise = require("bluebird");
 var requestPromise = require("request-promise");
 const reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
+var idplog = require("../logging");
 
 module.exports = function(context, req) {
   Promise.try(() => {
@@ -11,24 +12,22 @@ module.exports = function(context, req) {
       if (response.status === 200 && response.azureUserToken) {
         return getUnreadMails(response.azureUserToken, context);
       } else {
-        throw new atWorkValidateError(
-          JSON.stringify(response.message),
-          response.status
-        );
+        throw new atWorkValidateError("Atwork validation error", response);
       }
     })
     .then(unreadMails => {
       let res = {
         body: createTile(unreadMails)
       };
+      idplog({message: "Completed sucessfully", sender: "email_tile_v2", status: "200"})
       return context.done(null, res);
     })
     .catch(atWorkValidateError, error => {
-      context.log("Atwork error. response " + JSON.stringify(error.response));
       let res = {
-        status: error.response,
-        body: JSON.parse(error.message)
+        status: error.response.status,
+        body: error.response.message
       };
+      idplog({message: "Error: atWorkValidateError: "+error, sender: "email_tile_v2", status: error.response.status})
       return context.done(null, res);
     })
     .catch(error => {
@@ -36,6 +35,7 @@ module.exports = function(context, req) {
       let res = {
         body: error.message
       };
+      idplog({message: "Error: unknown error: "+error, sender: "email_tile_v2", status: "500"})
       return context.done(null, res);
     });
 };

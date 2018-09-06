@@ -2,6 +2,7 @@ var Promise = require("bluebird");
 var requestPromise = require("request-promise");
 const reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
+var idplog = require("../logging");
 
 module.exports = function(context, req) {
   Promise.try(() => {
@@ -11,24 +12,22 @@ module.exports = function(context, req) {
       if (response.status === 200 && response.azureUserToken) {
         return getAppointments(context, response.azureUserToken);
       } else {
-        throw new atWorkValidateError(
-          JSON.stringify(response.message),
-          response.status
-        );
+        throw new atWorkValidateError("Atwork validation error", response);
       }
     })
     .then(appointments => {
       let res = {
         body: createTile(appointments)
       };
+      idplog({message: "Completed sucessfully", sender: "calendar_tile", status: "200"})
       return context.done(null, res);
     })
     .catch(atWorkValidateError, error => {
-      context.log("Atwork error. response " + JSON.stringify(error.response));
       let res = {
-        status: error.response,
-        body: JSON.parse(error.message)
+        status: error.response.status,
+        body: error.response.message
       };
+      idplog({message: "Error: atWorkValidateError: "+error, sender: "calendar_tile", status: error.response.status})
       return context.done(null, res);
     })
     .catch(error => {
@@ -37,6 +36,7 @@ module.exports = function(context, req) {
         status: 500,
         body: "An unexpected error occurred"
       };
+      idplog({message: "Error: unknown error: "+error, sender: "calendar_tile", status: "500"})
       return context.done(null, res);
     });
 };

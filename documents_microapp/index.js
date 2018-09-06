@@ -3,21 +3,26 @@ var requestPromise = require("request-promise");
 const reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
 var azure = require("azure-storage");
+var idplog = require("../logging");
 var tableService = azure.createTableService(getEnvironmentVariable("AzureWebJobsStorage"));
 
 module.exports = function(context, req) {
   let graphToken;
-  let sub;
   Promise.try(() => {
     return reftokenAuth(req);
   })
     .then(response => {
       if (response.status === 200 && response.azureUserToken) {
         graphToken = response.azureUserToken;
-        sub = getUpnFromJWT(graphToken, context);
-        return getStorageInfo(sub, context);
+        if(response.configId && response.configId !== null) {
+          return getStorageInfo(response.configId, true, context);
+        }
+        else {
+          let upn = getUpnFromJWT(graphToken);
+          return getStorageInfo(upn, false, context);
+        }
       } else {
-        throw new atWorkValidateError(response.message, response.status);
+        throw new atWorkValidateError("Atwork validation error", response);
       }
     })
     .then(sharepointId => {
@@ -28,6 +33,7 @@ module.exports = function(context, req) {
       let res = {
         body: createMicroApp(documents, recentFiles)
       };
+      idplog({message: "Completed sucessfully", sender: "documents_microapp", status: "200"});
       return context.done(null, res);
     })
     .catch(tableStorageError, error => {
@@ -35,14 +41,15 @@ module.exports = function(context, req) {
       let res = {
         body: createEmptyMicroApp()
       };
+      idplog({message: "tableStorageError: ", sender: "documents_microapp", status: "204"});
       return context.done(null, res);
     })
     .catch(atWorkValidateError, error => {
-      context.log("Logger: " + error);
       let res = {
-        status: error.response,
-        body: JSON.parse(error.message)
+        status: error.response.status,
+        body: error.response.message
       };
+      idplog({message: "Error: atWorkValidateError: "+error, sender: "documents_microapp", status: error.response.status});
       return context.done(null, res);
     })
     .catch(sharePointError, error => {
@@ -54,6 +61,7 @@ module.exports = function(context, req) {
         status: 200,
         body: "Error from sharepoint"
       };
+      idplog({message: "Error: sharePointError: "+error, sender: "documents_microapp", status: "200"});
       return context.done(null, res);
     })
     .catch(error => {
@@ -62,11 +70,12 @@ module.exports = function(context, req) {
         status: 500,
         body: "An unexpected error occurred"
       };
+      idplog({message: "Error: unknown error: "+error, sender: "documents_microapp", status: "500"});
       return context.done(null, res);
     });
 };
 
-function getUpnFromJWT(azureToken, context) {
+function getUpnFromJWT(azureToken) {
   let arrayOfStrings = azureToken.split(".");
 
   let userObject = JSON.parse(
@@ -76,14 +85,19 @@ function getUpnFromJWT(azureToken, context) {
   return userObject.upn.toLowerCase();
 }
 
-function getStorageInfo(rowKey, context) {
+function getStorageInfo(rowKey, isConfigId, context) {
   return new Promise((resolve, reject) => {
     tableService.retrieveEntity("documents", "user_sharepointsites", rowKey, (err, result, response) => {
       if(!err) {
-        resolve(result.sharepointId._);
+        if(!isConfigId) {
+          resolve(result.sharepointId._);
+        }
+        else {
+          let sharepointInfo = JSON.parse(result.sharepointInfo._);
+          resolve(sharepointInfo.id);
+        }
       }
       else {
-        context.log(err);
         reject(new tableStorageError(err));
       }
     });

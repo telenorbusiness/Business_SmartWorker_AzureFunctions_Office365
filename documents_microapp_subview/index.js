@@ -2,48 +2,49 @@ var Promise = require("bluebird");
 var requestPromise = require("request-promise");
 const reftokenAuth = require("../auth");
 var moment = require("moment-timezone");
+var idplog = require("../logging");
 
 module.exports = function(context, req) {
   const folderName = req.body.folderName;
   const depth = req.body.depth;
   const driveId = req.body.driveId;
   const itemId = req.body.itemId;
-  context.log("Body ser slik ut: " + JSON.stringify(req.body));
   Promise.try(() => {
     return reftokenAuth(req);
   })
-    .then(response => {
-      if (response.status === 200 && response.azureUserToken) {
-        return getDocuments(response.azureUserToken, context, driveId, itemId);
-      } else {
-        throw new atWorkValidateError(response.message, response.status);
+  .then(response => {
+    if (response.status === 200 && response.azureUserToken) {
+      return getDocuments(response.azureUserToken, context, driveId, itemId);
+    } else {
+      throw new atWorkValidateError("Atwork validation error", response);      }
+  })
+  .then(documents => {
+    let res = {
+      body: {
+        type: "response-view",
+        view: createMicroApp(documents, folderName, depth)
       }
-    })
-    .then(documents => {
-      let res = {
-        body: {
-          type: "response-view",
-          view: createMicroApp(documents, folderName, depth)
-        }
-      };
-      return context.done(null, res);
-    })
-    .catch(atWorkValidateError, error => {
-      context.log("Logger: " + error.response);
-      let res = {
-        status: error.response,
-        body: JSON.parse(error.message)
-      };
-      return context.done(null, res);
-    })
-    .catch(error => {
-      context.log(error);
-      let res = {
-        status: 500,
-        body: "An unexpected error occurred"
-      };
-      return context.done(null, res);
-    });
+    };
+    idplog({message: "Completed sucessfully", sender: "documents_microapp_subview", status: "200"});
+    return context.done(null, res);
+  })
+  .catch(atWorkValidateError, error => {
+    let res = {
+      status: error.response.status,
+      body: error.response.message
+    };
+    idplog({message: "Error: atWorkValidateError: "+error, sender: "documents_microapp_subview", status: error.response.status});
+    return context.done(null, res);
+  })
+  .catch(error => {
+    context.log(error);
+    let res = {
+      status: 500,
+      body: "An unexpected error occurred"
+    };
+    idplog({message: "Error: unknown error: "+error, sender: "documents_microapp_subview", status: "500"});
+    return context.done(null, res);
+  });
 };
 
 function getDocuments(graphToken, context, driveId, itemId) {

@@ -43,15 +43,11 @@ let authenticateReferenceToken = function(req, context) {
 
       return client.userinfo(token).then(userinfo => {
         if (userinfo.success === true) {
-          if (!userinfo.azureUserToken) {
-            return Promise.resolve({
-              status: 400,
-              message: "Missing azuretoken"
-            });
-          }
           return Promise.resolve({
             status: 200,
-            azureUserToken: userinfo.azureUserToken
+            azureUserToken: userinfo.azureUserToken,
+            configId: userinfo.configId,
+            administrator: userinfo.administrator
           });
         } else if (!lodash.isUndefined(userinfo.error)) {
           return Promise.resolve({ status: 200, message: userinfo });
