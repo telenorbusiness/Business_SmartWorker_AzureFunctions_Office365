@@ -27,8 +27,8 @@ function sendRequest({ method, uri, data, retry = true }){
 }
 
 let idplog = function({ message, sender}){
-  let idpUrl = process.env["idpUrl"].replace(/\.well-known\/openid-configuration/g, "");
-  idpUrl = idpUrl+'echolog'
+  let idpUrl = process.env["idpUrl"].replace(/\idp\/.well-known\/openid-configuration/g, "");
+  idpUrl = idpUrl+'echolog';
 
   const data = {
     sender,
